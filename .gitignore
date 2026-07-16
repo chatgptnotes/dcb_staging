@@ -1,0 +1,50 @@
+# ===== OS =====
+.DS_Store
+**/.DS_Store
+
+# ===== Local data dumps (subscriber PII, oversized: 815 MB) =====
+db/
+
+# ===== Old WordPress install (malware-flagged, 5 GB) — never push =====
+wordpress/
+
+# ===== Secrets =====
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+# plaintext env copies that dodge the .env rules
+env.txt
+**/env.txt
+env.bak
+**/*.env.bak
+
+# ===== Dependencies / build artifacts (regenerable) =====
+**/vendor/
+**/node_modules/
+
+# ===== Archives / backups (may embed .env or db dumps) =====
+*.zip
+
+# ===== Laravel storage (logs can contain PII / stack traces / secrets) =====
+laravel-app/storage/logs/
+laravel-app/storage/framework/cache/
+laravel-app/storage/framework/sessions/
+laravel-app/storage/framework/views/
+laravel-app/storage/*.key
+laravel-app/bootstrap/cache/*.php
+
+# ===== User-generated content / PII =====
+laravel-app/public/reports_pdfs/
+laravel-app/public/db_files/reports/
+
+# ===== Misc =====
+.tmp-edge-pdf/
+laravel-app/.phpunit.result.cache
+*.log
+.claude
+.firecrawl
+.firecrawl/
+.pdf

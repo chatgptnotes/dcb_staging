@@ -1,0 +1,152 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [ 3 0 R 5 0 R 7 0 R ] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 3475 >>
+stream
+BT /F1 24 Tf 50 788 Td (Data Workflow) Tj ET
+BT /F1 10 Tf 50 756 Td (Haan. Is repo me data flow roughly aise hai.) Tj ET
+BT /F1 15 Tf 50 731 Td (1. DB Folder Runtime DB Nahi Hai) Tj ET
+BT /F1 10 Tf 50 709 Td (DB folder me SQL dumps hain:) Tj ET
+BT /F1 10 Tf 62 692 Td (- decodemy_app.sql = Laravel app ka data dump) Tj ET
+BT /F1 10 Tf 62 678 Td (- decodemy_wp.sql = old WordPress full DB dump) Tj ET
+BT /F1 10 Tf 62 664 Td (- wp_users_fresh.sql = WordPress users/meta ka focused dump) Tj ET
+BT /F1 10 Tf 50 650 Td (App chalne par data directly DB/*.sql files se read/write nahi hota. Ye files import/restore) Tj ET
+BT /F1 10 Tf 50 636 Td (ke liye hain. Runtime par Laravel MySQL database use karta hai, config) Tj ET
+BT /F1 10 Tf 50 622 Td (laravel-app/config/database.php aur .env se aata hai.) Tj ET
+BT /F1 15 Tf 50 597 Td (2. Login / User Data Kaha Se Aata Hai) Tj ET
+BT /F1 10 Tf 50 575 Td (Auth ke 2 mode hain:) Tj ET
+BT /F1 10 Tf 62 558 Td (- Legacy/WordPress mode: Laravel WordPress API call karta hai:) Tj ET
+BT /F1 10 Tf 74 544 Td (  - https://decodemybrain.com/wp-json/custom/v1/login) Tj ET
+BT /F1 10 Tf 74 530 Td (  - https://decodemybrain.com/wp-json/custom/v1/user?user_id=...) Tj ET
+BT /F1 10 Tf 62 516 Td (- Native mode: Laravel local users table se login karta hai.) Tj ET
+BT /F1 10 Tf 50 502 Td (Code: laravel-app/app/Http/Controllers/UserController.php) Tj ET
+BT /F1 10 Tf 50 485 Td (Login ke baad session me ye store hota hai:) Tj ET
+BT /F2 10 Tf 64 468 Td (session\(['user_id' => $user_id]\);) Tj ET
+BT /F2 10 Tf 64 450 Td (session\(['user_details' => $userData]\);) Tj ET
+BT /F2 10 Tf 64 432 Td (session\(['user_dob' => $userData['date_of_birth']]\);) Tj ET
+BT /F1 10 Tf 50 414 Td (Important: session\('user_id'\) mostly WordPress user id hai, Laravel users.id nahi.) Tj ET
+BT /F1 10 Tf 50 397 Td (User ka app mirror wp_users table me store hota hai. Model:) Tj ET
+BT /F1 10 Tf 50 383 Td (laravel-app/app/Models/WPUsers.php) Tj ET
+BT /F1 15 Tf 50 358 Td (3. Assessment / Questions Workflow) Tj ET
+BT /F1 10 Tf 50 336 Td (Questions ka master data DB tables se aata hai:) Tj ET
+BT /F1 10 Tf 62 319 Td (- questions) Tj ET
+BT /F1 10 Tf 62 305 Td (- dimension_questions) Tj ET
+BT /F1 10 Tf 62 291 Td (- skill_test_questions) Tj ET
+BT /F1 10 Tf 62 277 Td (- introvert_extrovert_questions) Tj ET
+BT /F1 10 Tf 50 263 Td (User answers separate tables me save hote hain.) Tj ET
+BT /F1 10 Tf 50 246 Td (Main brain test:) Tj ET
+BT /F1 10 Tf 62 229 Td (- question_answers_main = ek test attempt header) Tj ET
+BT /F1 10 Tf 62 215 Td (- question_answers = individual question answers) Tj ET
+BT /F1 10 Tf 62 201 Td (- brain_scores = calculated result) Tj ET
+BT /F1 10 Tf 62 187 Td (- wp_users.brain_profile_id = final profile id) Tj ET
+BT /F1 10 Tf 50 173 Td (Flow:) Tj ET
+BT /F1 10 Tf 62 156 Td (1. User /questions/q1 se start karta hai.) Tj ET
+BT /F1 10 Tf 62 142 Td (2. First answer par question_answers_main row create hoti hai.) Tj ET
+BT /F1 10 Tf 62 128 Td (3. Har question answer question_answers me save/update hota hai.) Tj ET
+BT /F1 10 Tf 62 114 Td (4. Last question q25 par status complete hota hai.) Tj ET
+BT /F1 10 Tf 62 100 Td (5. BrainResultsController->add_brain_results\(\) score calculate karta hai.) Tj ET
+BT /F1 10 Tf 62 86 Td (6. Result brain_scores me save hota hai.) Tj ET
+BT /F1 10 Tf 62 72 Td (7. Matching profile profile_types se find hoti hai.) Tj ET
+BT /F1 10 Tf 62 58 Td (8. Final profile wp_users.brain_profile_id me store hota hai.) Tj ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 3008 >>
+stream
+BT /F1 10 Tf 50 788 Td (Code:) Tj ET
+BT /F1 10 Tf 62 771 Td (- laravel-app/app/Http/Controllers/QuestionsController.php) Tj ET
+BT /F1 10 Tf 62 757 Td (- laravel-app/app/Http/Controllers/BrainResultsController.php) Tj ET
+BT /F1 15 Tf 50 735 Td (4. Dimensional Workflow) Tj ET
+BT /F1 10 Tf 50 713 Td (Tables:) Tj ET
+BT /F1 10 Tf 62 696 Td (- dimensional_question_answers_main) Tj ET
+BT /F1 10 Tf 62 682 Td (- dimensional_question_answers) Tj ET
+BT /F1 10 Tf 62 668 Td (- user_dimensional_score) Tj ET
+BT /F1 10 Tf 50 654 Td (Flow:) Tj ET
+BT /F1 10 Tf 62 637 Td (- User answers save hote hain dimensional_question_answers me.) Tj ET
+BT /F1 10 Tf 62 623 Td (- Completion par scores calculate hote hain.) Tj ET
+BT /F1 10 Tf 62 609 Td (- Scores user_dimensional_score me save hote hain.) Tj ET
+BT /F1 15 Tf 50 587 Td (5. Skill Test Workflow) Tj ET
+BT /F1 10 Tf 50 565 Td (Tables:) Tj ET
+BT /F1 10 Tf 62 548 Td (- skill_test_answers_main) Tj ET
+BT /F1 10 Tf 62 534 Td (- skill_test_question_answers) Tj ET
+BT /F1 10 Tf 62 520 Td (- skill_brain_scores) Tj ET
+BT /F1 10 Tf 62 506 Td (- wp_users.skill_brain_profile_id) Tj ET
+BT /F1 10 Tf 50 492 Td (Flow:) Tj ET
+BT /F1 10 Tf 62 475 Td (- Skill test answers save hote hain.) Tj ET
+BT /F1 10 Tf 62 461 Td (- Last question ke baad BrainResultsController->add_skill_brain_results\(\) call hota) Tj ET
+BT /F1 10 Tf 62 447 Td (- hai.) Tj ET
+BT /F1 10 Tf 62 433 Td (- Score skill_brain_scores me save hota hai.) Tj ET
+BT /F1 10 Tf 62 419 Td (- Final skill profile wp_users.skill_brain_profile_id me update hota hai.) Tj ET
+BT /F1 10 Tf 50 405 Td (Code: laravel-app/app/Http/Controllers/SkillTestController.php) Tj ET
+BT /F1 15 Tf 50 380 Td (6. Introvert / Extrovert Workflow) Tj ET
+BT /F1 10 Tf 50 358 Td (Tables:) Tj ET
+BT /F1 10 Tf 62 341 Td (- introvert_extrovert_answer_main) Tj ET
+BT /F1 10 Tf 62 327 Td (- introvert_extrovert_question_answers) Tj ET
+BT /F1 10 Tf 62 313 Td (- wp_users.introverted_extroverted) Tj ET
+BT /F1 10 Tf 50 299 Td (Flow:) Tj ET
+BT /F1 10 Tf 62 282 Td (- 10 questions answer hote hain.) Tj ET
+BT /F1 10 Tf 62 268 Td (- Answers DB me save hote hain.) Tj ET
+BT /F1 10 Tf 62 254 Td (- Score calculate hota hai.) Tj ET
+BT /F1 10 Tf 62 240 Td (- Final result introverted ya extroverted as wp_users.introverted_extroverted me save) Tj ET
+BT /F1 10 Tf 62 226 Td (- hota hai.) Tj ET
+BT /F1 10 Tf 50 212 Td (Code: laravel-app/app/Http/Controllers/IntrovertExtrovertQuestionController.php) Tj ET
+BT /F1 15 Tf 50 187 Td (7. Package / Payment Workflow) Tj ET
+BT /F1 10 Tf 50 165 Td (Package entitlement ka main source:) Tj ET
+BT /F1 10 Tf 62 148 Td (- wp_users.package) Tj ET
+BT /F1 10 Tf 50 134 Td (Mirror:) Tj ET
+BT /F1 10 Tf 62 117 Td (- users.package) Tj ET
+BT /F1 10 Tf 62 103 Td (- users.activated_date) Tj ET
+BT /F1 10 Tf 50 89 Td (Central writer: laravel-app/app/Services/Billing/EntitlementService.php) Tj ET
+BT /F1 10 Tf 50 72 Td (Package update 3 jagah se aa sakta hai:) Tj ET
+BT /F1 10 Tf 62 55 Td (- Free package select: buy_package\(\)) Tj ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> /Contents 8 0 R >>
+endobj
+8 0 obj
+<< /Length 447 >>
+stream
+BT /F1 10 Tf 62 788 Td (- Access code redeem: enter_access_code\(\)) Tj ET
+BT /F1 10 Tf 62 774 Td (- Stripe checkout/webhook:) Tj ET
+BT /F1 10 Tf 74 760 Td (  - laravel-app/app/Http/Controllers/CheckoutController.php) Tj ET
+BT /F1 10 Tf 74 746 Td (  - laravel-app/app/Http/Controllers/StripeWebhookController.php) Tj ET
+BT /F1 10 Tf 50 732 Td (API se WordPress package sync bhi hai:) Tj ET
+BT /F2 10 Tf 64 715 Td (/api/update-package-status) Tj ET
+endstream
+endobj
+9 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+10 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 11
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000129 00000 n 
+0000000266 00000 n 
+0000003793 00000 n 
+0000003930 00000 n 
+0000006990 00000 n 
+0000007127 00000 n 
+0000007625 00000 n 
+0000007695 00000 n 
+trailer
+<< /Size 11 /Root 1 0 R >>
+startxref
+7764
+%%EOF

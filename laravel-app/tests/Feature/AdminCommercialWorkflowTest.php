@@ -1,0 +1,227 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Models\OrganizationEnquiry;
+use App\Models\Organization;
+use App\Models\OrganizationQuote;
+use App\Models\PricingPackage;
+use App\Models\User;
+use App\Services\Billing\StripePriceGateway;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
+use Tests\TestCase;
+
+class AdminCommercialWorkflowTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->cleanupArtifacts();
+        DB::beginTransaction();
+    }
+
+    protected function tearDown(): void
+    {
+        DB::rollBack();
+        $this->cleanupArtifacts();
+        parent::tearDown();
+    }
+
+    public function test_admin_can_change_the_public_price_before_stripe_is_configured(): void
+    {
+        Config::set('cashier.secret', '');
+        $admin = $this->admin('pricing-admin@example.local');
+        $package = PricingPackage::create([
+            'slug' => 'admin-price-test',
+            'title' => 'Before',
+            'amount' => 20,
+            'currency' => 'usd',
+            'price_label' => '$20',
+            'type' => 'one_time',
+            'is_visible' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->post('/admin/edit-pricing-package/'.$package->id, [
+                'title' => 'Updated package',
+                'amount' => '37.50',
+                'currency' => 'usd',
+                'button_text' => 'Choose now',
+                'type' => 'one_time',
+                'sort_order' => 0,
+                'is_visible' => '1',
+            ])
+            ->assertRedirect('/admin/pricing-packages')
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'updated locally'));
+
+        $this->assertDatabaseHas('pricing_packages', [
+            'id' => $package->id,
+            'title' => 'Updated package',
+            'amount' => '37.50',
+            'price_label' => '$37.50',
+        ]);
+
+        $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50');
+    }
+
+    public function test_admin_price_change_reaches_customers_when_stripe_is_temporarily_unavailable(): void
+    {
+        Config::set('cashier.secret', 'sk_test_unavailable');
+        app()->bind(StripePriceGateway::class, fn () => new class implements StripePriceGateway {
+            public function retrievePrice(string $priceId): object { throw new RuntimeException('Network unavailable'); }
+            public function retrieveProduct(string $productId): object { throw new RuntimeException('Network unavailable'); }
+            public function createProduct(array $params): object { throw new RuntimeException('Network unavailable'); }
+            public function updateProduct(string $productId, array $params): object { throw new RuntimeException('Network unavailable'); }
+            public function createPrice(array $params): object { throw new RuntimeException('Network unavailable'); }
+        });
+
+        $admin = $this->admin('pricing-admin@example.local');
+        $package = PricingPackage::create([
+            'slug' => 'admin-price-test',
+            'title' => 'Before',
+            'amount' => 20,
+            'currency' => 'usd',
+            'price_label' => '$20',
+            'type' => 'one_time',
+            'is_visible' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->post('/admin/edit-pricing-package/'.$package->id, [
+                'title' => 'Network-safe package',
+                'amount' => '41.00',
+                'currency' => 'usd',
+                'button_text' => 'Choose now',
+                'type' => 'one_time',
+                'sort_order' => 0,
+                'is_visible' => '1',
+            ])
+            ->assertRedirect('/admin/pricing-packages')
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'live on customer pages'));
+
+        $this->assertDatabaseHas('pricing_packages', [
+            'id' => $package->id,
+            'amount' => '41.00',
+            'price_label' => '$41',
+            'stripe_price_id' => null,
+        ]);
+        $this->get('/plans')->assertOk()->assertSee('Network-safe package')->assertSee('$41');
+    }
+
+    public function test_public_organisation_enquiry_is_stored_and_visible_to_admin(): void
+    {
+        $email = 'enquiry-workflow@example.local';
+
+        $this->post('/organizations/enquiry', [
+            'organization_name' => 'Northstar School',
+            'group_size' => 84,
+            'contact_name' => 'Riya Shah',
+            'contact_phone' => '+91 90000 00000',
+            'contact_email' => $email,
+            'message' => 'Please send a group assessment proposal.',
+        ])->assertRedirect(route('organization.enquiry.create'));
+
+        $this->assertDatabaseHas('organization_enquiries', [
+            'organization_name' => 'Northstar School',
+            'contact_email' => $email,
+            'status' => 'new',
+        ]);
+
+        $this->actingAs($this->admin('enquiry-admin@example.local'))
+            ->get('/admin/organization-enquiries')
+            ->assertOk()
+            ->assertSee('Northstar School')
+            ->assertSee('Riya Shah')
+            ->assertSee($email);
+    }
+
+    public function test_admin_starts_a_business_agreement_from_the_received_enquiry_only_once(): void
+    {
+        $enquiry = OrganizationEnquiry::create([
+            'organization_name' => 'Enquiry First School',
+            'group_size' => 51,
+            'contact_name' => 'Agreement Contact',
+            'contact_email' => 'enquiry-deal@example.local',
+            'status' => 'new',
+        ]);
+        $admin = $this->admin('enquiry-deal-admin@example.local');
+
+        $this->actingAs($admin)
+            ->get('/admin/organization-enquiries/'.$enquiry->id.'/create-deal')
+            ->assertOk()
+            ->assertSee('Create business agreement')
+            ->assertSee('Enquiry First School')
+            ->assertSee('value="51"', false);
+
+        $this->actingAs($admin)
+            ->get('/admin/organization-quotes/create')
+            ->assertRedirect('/admin/organization-enquiries');
+    }
+
+    public function test_agreements_list_shows_claimed_seat_usage_and_the_requested_sidebar_order(): void
+    {
+        $organization = Organization::create([
+            'name' => 'Seat Usage School',
+            'contact_name' => 'Seat Contact',
+            'contact_email' => 'seat-usage@example.local',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TEST-SEAT-USAGE',
+            'package_slug' => 'core',
+            'seat_count' => 5,
+            'unit_amount_minor' => 1000,
+            'total_amount_minor' => 5000,
+            'status' => 'paid',
+        ]);
+        $quote->seats()->createMany([
+            ['package_slug' => 'core', 'access_term' => 'permanent', 'status' => 'claimed'],
+            ['package_slug' => 'core', 'access_term' => 'permanent', 'status' => 'claimed'],
+            ['package_slug' => 'core', 'access_term' => 'permanent', 'status' => 'available'],
+            ['package_slug' => 'core', 'access_term' => 'permanent', 'status' => 'invited'],
+            ['package_slug' => 'core', 'access_term' => 'permanent', 'status' => 'revoked'],
+        ]);
+
+        $response = $this->actingAs($this->admin('seat-usage-admin@example.local'))
+            ->get('/admin/organization-quotes')
+            ->assertOk()
+            ->assertSee('Seats used')
+            ->assertSee('2 / 5')
+            ->assertDontSee('>Access Codes<', false);
+
+        $content = $response->getContent();
+        $this->assertLessThan(strpos($content, '>Organisation Enquiries<'), strpos($content, '>Vouchers<'));
+        $this->assertLessThan(strpos($content, '>Agreements<'), strpos($content, '>Organisation Enquiries<'));
+    }
+
+    private function admin(string $email): User
+    {
+        $admin = new User();
+        $admin->email = $email;
+        $admin->password = bcrypt('safe-test-password');
+        $admin->user_role = '1';
+        $admin->status = 'active';
+        $admin->save();
+
+        return $admin;
+    }
+
+    private function cleanupArtifacts(): void
+    {
+        OrganizationEnquiry::where('contact_email', 'enquiry-workflow@example.local')->delete();
+        OrganizationEnquiry::where('contact_email', 'enquiry-deal@example.local')->delete();
+        PricingPackage::where('slug', 'admin-price-test')->delete();
+        User::whereIn('email', [
+            'pricing-admin@example.local',
+            'enquiry-admin@example.local',
+            'enquiry-deal-admin@example.local',
+            'seat-usage-admin@example.local',
+        ])->delete();
+    }
+}

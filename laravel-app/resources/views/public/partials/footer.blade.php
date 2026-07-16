@@ -1,0 +1,1 @@
+<footer class="footer"><span>© {{ now()->year }} DecodeMyBrain</span><span><a href="{{ url('terms-and-conditions') }}">Terms</a><a class="text-link" href="{{ url('contact-form') }}">Contact us</a></span></footer>

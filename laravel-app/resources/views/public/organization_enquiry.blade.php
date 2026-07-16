@@ -1,0 +1,11 @@
+@extends('public.layout')
+@section('title','Bulk assessment enquiry — DecodeMyBrain')
+@push('styles')<style>.enquiry{max-width:700px;margin:0 auto}.enquiry-head{text-align:center;margin-bottom:36px}.enquiry-head .lead{margin:18px auto 0;max-width:620px}.submit{width:100%;margin-top:26px}.fine{text-align:center;margin:18px 0 0;color:var(--muted);font-size:14px}</style>@endpush
+@section('body')
+@include('public.partials.nav')
+<main class="page"><div class="enquiry">
+@if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
+@if($errors->any())<div class="alert">Please correct the highlighted details and submit again.</div>@endif
+<div class="enquiry-head"><span class="eyebrow">Bulk assessment</span><h1 class="heading" style="margin:26px 0 0">Tell us about your group</h1><p class="lead">We reply within one working day to agree numbers and price. Payment is handled offline by invoice or transfer.</p></div><form method="post" action="{{ route('organization.enquiry.store') }}">@csrf<div class="form-grid"><div class="field"><label>Organization name</label><input name="organization_name" value="{{ old('organization_name') }}" placeholder="Acme Secondary School" required></div><div class="field"><label>Approximate group size</label><input type="number" min="2" name="group_size" value="{{ old('group_size') }}" placeholder="120" required></div><div class="field"><label>Contact person</label><input name="contact_name" value="{{ old('contact_name') }}" placeholder="Priya Menon" required></div><div class="field"><label>Phone</label><input name="contact_phone" value="{{ old('contact_phone') }}" placeholder="+971 50 000 0000"></div><div class="field full"><label>Contact email</label><input type="email" name="contact_email" value="{{ old('contact_email') }}" placeholder="priya@acme.edu" required></div><div class="field full"><label>Message</label><textarea name="message" placeholder="We want to assess our Grade 11 cohort before term starts in September.">{{ old('message') }}</textarea></div></div><button class="button submit" type="submit">Send inquiry</button><p class="fine">You are not buying anything now. This starts a conversation with our team.</p></form></div></main>
+@include('public.partials.footer')
+@endsection

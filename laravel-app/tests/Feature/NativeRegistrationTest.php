@@ -1,0 +1,201 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Feature;
+
+use App\Models\User;
+use App\Models\WPUsers;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+/**
+ * Native registration against the real local DB (no RefreshDatabase).
+ * Every account created here uses a unique throwaway email/username and is
+ * removed in tearDown via the high-offset wp_user_id range it lands in.
+ */
+class NativeRegistrationTest extends TestCase
+{
+    private const EMAIL = 'native-signup-test@example.local';
+    private const USERNAME = 'native_signup_test';
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('app.auth_driver', 'native');
+        config()->set('packages.free_slug', 'free');
+        // These tests cover the free-first, direct (non-OTP) signup → /intro.
+        config()->set('packages.funnel', 'free_first');
+        config()->set('app.otp_enabled', false);
+        $this->cleanup();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->cleanup();
+        parent::tearDown();
+    }
+
+    private function cleanup(): void
+    {
+        $ids = User::where('email', self::EMAIL)->orWhere('username', self::USERNAME)->pluck('wp_user_id')->all();
+        User::where('email', self::EMAIL)->orWhere('username', self::USERNAME)->delete();
+        if (!empty($ids)) {
+            WPUsers::whereIn('user_id', $ids)->delete();
+        }
+    }
+
+    private function validPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'first_name' => 'Native',
+            'last_name' => 'Tester',
+            'user_name' => self::USERNAME,
+            'dob' => '2000-01-01',
+            'email' => self::EMAIL,
+            'phone' => '+44 7700 000000',
+            'password' => 'Secret#2026',
+            'password_confirmation' => 'Secret#2026',
+        ], $overrides);
+    }
+
+    public function test_signup_page_loads(): void
+    {
+        $this->get('/sign-up')->assertOk();
+    }
+
+    public function test_valid_registration_creates_account_and_logs_in(): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload());
+
+        $response->assertRedirect('intro');
+
+        $user = User::where('email', self::EMAIL)->first();
+        $this->assertNotNull($user);
+        $this->assertGreaterThanOrEqual(1000000, (int) $user->wp_user_id);
+        $this->assertTrue(Hash::check('Secret#2026', $user->password));
+        $this->assertSame('Native Tester', $user->display_name);
+        $this->assertSame('+44 7700 000000', $user->billing_phone);
+
+        // wp_users mirror with the free package.
+        $mirror = WPUsers::where('user_id', $user->wp_user_id)->first();
+        $this->assertNotNull($mirror);
+        $this->assertSame('free', $mirror->package);
+
+        // Logged in: session carries the WP id.
+        $this->assertSame((int) $user->wp_user_id, (int) session('user_id'));
+    }
+
+    public function test_pay_first_registration_with_selected_plan_redirects_to_checkout(): void
+    {
+        config()->set('packages.funnel', 'pay_first');
+        config()->set('packages.driver', 'cashier');
+        config()->set('packages.plans', [
+            'decodemybrain-deep-dive' => [
+                'type' => 'subscription',
+                'stripe_price_id' => 'price_test_deep_dive',
+            ],
+        ]);
+
+        $response = $this->post('/sign-up', $this->validPayload([
+            'intended_package' => 'decodemybrain-deep-dive',
+        ]));
+
+        $response->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
+    }
+
+    public function test_new_public_purchase_registration_reaches_code_or_payment_choice(): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload([
+            'intended_package' => 'decodemybrain-deep-dive',
+            'purchase_flow' => '1',
+        ]));
+
+        $response->assertRedirect(route('access.choice'));
+        $this->get(route('access.choice'))->assertOk()->assertSee('One quick question before you start');
+    }
+
+    public function test_duplicate_email_is_rejected(): void
+    {
+        $this->post('/sign-up', $this->validPayload());
+        $this->flushSession();
+
+        $response = $this->post('/sign-up', $this->validPayload(['user_name' => 'different_name']));
+        $response->assertSessionHas('fail');
+        $this->assertSame(1, User::where('email', self::EMAIL)->count());
+    }
+
+    public function test_duplicate_username_is_rejected(): void
+    {
+        $this->post('/sign-up', $this->validPayload());
+        $this->flushSession();
+
+        $response = $this->post('/sign-up', $this->validPayload(['email' => 'other-'.self::EMAIL]));
+        $response->assertSessionHas('fail');
+
+        // cleanup the alternate email if it somehow got through
+        User::where('email', 'other-'.self::EMAIL)->delete();
+    }
+
+    public function test_underage_is_rejected(): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload(['dob' => '2020-01-01']));
+        $response->assertSessionHas('fail');
+        $this->assertNull(User::where('email', self::EMAIL)->first());
+    }
+
+    public function test_future_dob_is_rejected(): void
+    {
+        // Carbon->age is absolute, so a future DOB could read as a valid age —
+        // the before:today rule must block it.
+        $response = $this->post('/sign-up', $this->validPayload(['dob' => '2050-01-01']));
+        $response->assertSessionHasErrors('dob');
+        $this->assertNull(User::where('email', self::EMAIL)->first());
+    }
+
+    public function test_password_mismatch_is_rejected(): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload(['password_confirmation' => 'Different#2026']));
+        $response->assertSessionHasErrors('password');
+        $this->assertNull(User::where('email', self::EMAIL)->first());
+    }
+
+    public function test_new_user_can_log_in_natively_after_signup(): void
+    {
+        $this->post('/sign-up', $this->validPayload());
+        $this->flushSession();
+
+        $login = $this->post('/sign-in', [
+            'user_name' => self::USERNAME,
+            'password' => 'Secret#2026',
+        ]);
+
+        // Lands on intro (no brain profile yet) — i.e. authenticated.
+        $login->assertRedirect('intro');
+        $user = User::where('email', self::EMAIL)->first();
+        $this->assertSame((int) $user->wp_user_id, (int) session('user_id'));
+    }
+
+    public function test_login_with_selected_plan_redirects_to_checkout(): void
+    {
+        config()->set('packages.funnel', 'pay_first');
+        config()->set('packages.driver', 'cashier');
+        config()->set('packages.plans', [
+            'decodemybrain-deep-dive' => [
+                'type' => 'subscription',
+                'stripe_price_id' => 'price_test_deep_dive',
+            ],
+        ]);
+
+        $this->post('/sign-up', $this->validPayload());
+        $this->flushSession();
+
+        $login = $this->post('/sign-in', [
+            'user_name' => self::USERNAME,
+            'password' => 'Secret#2026',
+            'intended_package' => 'decodemybrain-deep-dive',
+        ]);
+
+        $login->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
+    }
+}
