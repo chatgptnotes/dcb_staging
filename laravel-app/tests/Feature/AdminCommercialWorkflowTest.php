@@ -7,11 +7,14 @@ namespace Tests\Feature;
 use App\Models\OrganizationEnquiry;
 use App\Models\Organization;
 use App\Models\OrganizationQuote;
+use App\Mail\OrganizationAccessCodeMail;
 use App\Models\PricingPackage;
 use App\Models\User;
 use App\Services\Billing\StripePriceGateway;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -155,13 +158,97 @@ class AdminCommercialWorkflowTest extends TestCase
         $this->actingAs($admin)
             ->get('/admin/organization-enquiries/'.$enquiry->id.'/create-deal')
             ->assertOk()
-            ->assertSee('Create business agreement')
+            ->assertSee('New business agreement')
+            ->assertSee('Payment received')
             ->assertSee('Enquiry First School')
             ->assertSee('value="51"', false);
 
         $this->actingAs($admin)
             ->get('/admin/organization-quotes/create')
             ->assertRedirect('/admin/organization-enquiries');
+    }
+
+    public function test_admin_can_email_and_resend_an_active_organisation_code_to_the_enquiry_contact(): void
+    {
+        Mail::fake();
+        $enquiry = OrganizationEnquiry::create([
+            'organization_name' => 'Email Code School',
+            'group_size' => 8,
+            'contact_name' => 'Email Contact',
+            'contact_email' => 'organisation-code@example.local',
+            'status' => 'converted',
+        ]);
+        $organization = Organization::create([
+            'name' => 'Email Code School',
+            'contact_name' => 'Email Contact',
+            'contact_email' => $enquiry->contact_email,
+        ]);
+        $code = 'ORG-EMAIL-2026';
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'organization_enquiry_id' => $enquiry->id,
+            'quote_number' => 'TEST-EMAIL-CODE',
+            'package_slug' => 'core',
+            'seat_count' => 8,
+            'unit_amount_minor' => 1000,
+            'total_amount_minor' => 8000,
+            'status' => 'paid',
+            'shared_code_hash' => hash('sha256', $code),
+            'shared_code_encrypted' => Crypt::encryptString($code),
+            'shared_code_hint' => 'ORG-EM…2026',
+            'shared_code_enabled' => true,
+        ]);
+        $admin = $this->admin('organization-email-admin@example.local');
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/send-email')
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(OrganizationAccessCodeMail::class, function (OrganizationAccessCodeMail $mail) use ($code, $enquiry): bool {
+            return $mail->hasTo($enquiry->contact_email) && $mail->code === $code;
+        });
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/send-email')
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(OrganizationAccessCodeMail::class, 2);
+    }
+
+    public function test_payment_toggle_on_a_new_deal_activates_seats_and_the_enterprise_code_after_save(): void
+    {
+        $enquiry = OrganizationEnquiry::create([
+            'organization_name' => 'Toggle School',
+            'group_size' => 3,
+            'contact_name' => 'Toggle Contact',
+            'contact_email' => 'toggle-school@example.local',
+            'status' => 'new',
+        ]);
+        $admin = $this->admin('toggle-payment-admin@example.local');
+
+        $this->actingAs($admin)->post('/admin/organization-quotes', [
+            'organization_enquiry_id' => $enquiry->id,
+            'organization_name' => $enquiry->organization_name,
+            'contact_name' => $enquiry->contact_name,
+            'contact_email' => $enquiry->contact_email,
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 3,
+            'unit_amount' => '29.00',
+            'discount_amount' => '0.00',
+            'billing_type' => 'one_time',
+            'access_term' => 'permanent',
+            'payment_received' => '1',
+        ])->assertRedirect()->assertSessionHas('organization_code');
+
+        $quote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->firstOrFail();
+        $this->assertSame('paid', $quote->status);
+        $this->assertTrue($quote->shared_code_enabled);
+        $this->assertSame(3, $quote->seats()->count());
+
+        $this->actingAs($admin)->get('/admin/enterprise-codes')
+            ->assertOk()->assertSee('Toggle School')->assertSee('Export usage');
     }
 
     public function test_agreements_list_shows_claimed_seat_usage_and_the_requested_sidebar_order(): void
@@ -196,8 +283,8 @@ class AdminCommercialWorkflowTest extends TestCase
             ->assertDontSee('>Access Codes<', false);
 
         $content = $response->getContent();
-        $this->assertLessThan(strpos($content, '>Organisation Enquiries<'), strpos($content, '>Vouchers<'));
-        $this->assertLessThan(strpos($content, '>Agreements<'), strpos($content, '>Organisation Enquiries<'));
+        $this->assertTrue(strpos($content, '>Inquiries<') < strpos($content, '>Agreements<'));
+        $this->assertTrue(strpos($content, '>Agreements<') < strpos($content, '>Enterprise codes<'));
     }
 
     private function admin(string $email): User
@@ -222,6 +309,8 @@ class AdminCommercialWorkflowTest extends TestCase
             'enquiry-admin@example.local',
             'enquiry-deal-admin@example.local',
             'seat-usage-admin@example.local',
+            'organization-email-admin@example.local',
+            'toggle-payment-admin@example.local',
         ])->delete();
     }
 }

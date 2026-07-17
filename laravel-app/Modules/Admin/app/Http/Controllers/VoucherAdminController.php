@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\OrganizationAccessCodeMail;
 use App\Models\Organization;
 use App\Models\OrganizationEnquiry;
 use App\Models\OrganizationQuote;
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VoucherAdminController extends Controller
 {
@@ -165,6 +167,50 @@ class VoucherAdminController extends Controller
         ]);
     }
 
+    /** Corporate access codes; the older generic voucher screen remains available separately. */
+    public function enterpriseCodes()
+    {
+        $quotes = OrganizationQuote::with(['organization', 'enquiry'])
+            ->withCount(['seats as registered_count' => fn ($query) => $query->where('status', 'claimed')])
+            ->where(function ($query) {
+                $query->whereNotNull('shared_code_hint')->orWhere('status', 'paid');
+            })
+            ->latest('paid_at')->latest()->paginate(30);
+
+        $quotes->getCollection()->transform(fn (OrganizationQuote $quote) => $this->withEnterpriseUsage($quote));
+
+        return view('admin::enterprise_codes.index', ['quotes' => $quotes]);
+    }
+
+    public function exportEnterpriseCodeUsage(): StreamedResponse
+    {
+        $quotes = OrganizationQuote::with('organization')
+            ->withCount(['seats as registered_count' => fn ($query) => $query->where('status', 'claimed')])
+            ->where(function ($query) {
+                $query->whereNotNull('shared_code_hint')->orWhere('status', 'paid');
+            })
+            ->latest('paid_at')->latest()->get()
+            ->map(fn (OrganizationQuote $quote) => $this->withEnterpriseUsage($quote));
+
+        return response()->streamDownload(function () use ($quotes): void {
+            $output = fopen('php://output', 'wb');
+            fputcsv($output, ['Entity', 'Masked code', 'Issued', 'Registered', 'Completed', 'Remaining', 'State', 'Issued at']);
+            foreach ($quotes as $quote) {
+                fputcsv($output, [
+                    $quote->organization->name,
+                    $quote->shared_code_hint ?: 'Not generated',
+                    $quote->seat_count,
+                    $quote->registered_count,
+                    $quote->completed_count,
+                    $quote->remaining_count,
+                    $quote->shared_code_enabled ? 'Enabled' : 'Disabled',
+                    ($quote->paid_at ?? $quote->created_at)->timezone(config('app.timezone'))->format('Y-m-d H:i:s T'),
+                ]);
+            }
+            fclose($output);
+        }, 'enterprise-code-usage-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
+    }
+
     public function updateEnquiry(Request $request, int $id): RedirectResponse
     {
         $data = $request->validate(['status' => ['required', 'in:new,reviewed,converted,closed']]);
@@ -199,6 +245,8 @@ class VoucherAdminController extends Controller
     public function storeQuote(
         Request $request,
         PackageCatalog $catalog,
+        OrganizationSeatService $seats,
+        OrganizationCodeService $codes,
     ): RedirectResponse
     {
         $data = $request->validate([
@@ -217,6 +265,7 @@ class VoucherAdminController extends Controller
             'expires_at' => ['nullable', 'date', 'after:now'],
             'internal_notes' => ['nullable', 'string', 'max:5000'],
             'customer_notes' => ['nullable', 'string', 'max:5000'],
+            'payment_received' => ['nullable', 'boolean'],
         ]);
         if (!$catalog->exists($data['package_slug']) || $data['package_slug'] === $catalog->freeSlug()) {
             return back()->withInput()->with('fail', 'Choose a valid paid package.');
@@ -276,6 +325,21 @@ class VoucherAdminController extends Controller
                 ->with('fail', 'This enquiry already has an agreement.');
         }
 
+        if ($request->boolean('payment_received')) {
+            try {
+                [, $code] = $this->activateQuote($quote->id, $seats, $codes);
+                $response = redirect('admin/organization-quotes/'.$quote->id)
+                    ->with('success', 'Deal saved. Payment received, seats allocated, and the enterprise code is active.');
+                if ($code) {
+                    $response->with('organization_code', $code);
+                }
+                return $response;
+            } catch (RuntimeException $e) {
+                return redirect('admin/organization-quotes/'.$quote->id)
+                    ->with('fail', 'Deal was saved, but payment could not be activated: '.$e->getMessage());
+            }
+        }
+
         return redirect('admin/organization-quotes/'.$quote->id)
             ->with('success', 'Agreement created. Record payment to generate the organisation access code.');
     }
@@ -288,19 +352,7 @@ class VoucherAdminController extends Controller
     public function markQuotePaid(int $id, OrganizationSeatService $seats, OrganizationCodeService $codes): RedirectResponse
     {
         try {
-            [$quote, $code] = DB::transaction(function () use ($id, $seats, $codes) {
-                $quote = OrganizationQuote::lockForUpdate()->findOrFail($id);
-                if (in_array($quote->status, ['cancelled', 'expired'], true)) {
-                    throw new RuntimeException('This agreement cannot be paid in its current state.');
-                }
-                if ($quote->status !== 'paid') {
-                    $quote->update(['status' => 'paid', 'paid_at' => now()]);
-                }
-                $seats->allocatePaidSeats($quote);
-                $quote->refresh();
-
-                return [$quote, $quote->shared_code_enabled ? null : $codes->createOrReplace($quote)];
-            });
+            [$quote, $code] = $this->activateQuote($id, $seats, $codes);
         } catch (RuntimeException $e) {
             return back()->with('fail', $e->getMessage());
         }
@@ -324,6 +376,31 @@ class VoucherAdminController extends Controller
         } catch (RuntimeException $e) {
             return back()->with('fail', $e->getMessage());
         }
+    }
+
+    /** Email the currently active code to the contact who submitted this enquiry. */
+    public function sendSharedCodeEmail(int $id): RedirectResponse
+    {
+        $quote = OrganizationQuote::with(['organization', 'enquiry'])->findOrFail($id);
+        $enquiry = $quote->enquiry;
+
+        if (! $quote->shared_code_enabled || ! $quote->shared_code_encrypted) {
+            return back()->with('fail', 'Generate and activate an organisation code before sending it by email.');
+        }
+        if (! $enquiry || ! filter_var($enquiry->contact_email, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('fail', 'This agreement has no valid enquiry contact email to send the code to.');
+        }
+
+        try {
+            $code = Crypt::decryptString($quote->shared_code_encrypted);
+            Mail::to($enquiry->contact_email, $enquiry->contact_name)
+                ->send(new OrganizationAccessCodeMail($quote, $code));
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('fail', 'The organisation code email could not be sent. Please try again.');
+        }
+
+        return back()->with('success', 'Organisation code emailed to '.$enquiry->contact_email.'.');
     }
 
     /** Reveal the real redeemable organisation code; the visible hint is not a code. */
@@ -438,6 +515,35 @@ class VoucherAdminController extends Controller
     {
         [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '');
         return ((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
+    }
+
+    /** @return array{0: OrganizationQuote, 1: string|null} */
+    private function activateQuote(int $id, OrganizationSeatService $seats, OrganizationCodeService $codes): array
+    {
+        return DB::transaction(function () use ($id, $seats, $codes) {
+            $quote = OrganizationQuote::lockForUpdate()->findOrFail($id);
+            if (in_array($quote->status, ['cancelled', 'expired'], true)) {
+                throw new RuntimeException('This agreement cannot be paid in its current state.');
+            }
+            if ($quote->status !== 'paid') {
+                $quote->update(['status' => 'paid', 'paid_at' => now()]);
+            }
+            $seats->allocatePaidSeats($quote);
+            $quote->refresh();
+
+            return [$quote, $quote->shared_code_enabled ? null : $codes->createOrReplace($quote)];
+        });
+    }
+
+    private function withEnterpriseUsage(OrganizationQuote $quote): OrganizationQuote
+    {
+        $claimedUserIds = $quote->seats()->where('status', 'claimed')->pluck('claimed_by_wp_user_id')->filter()->unique();
+        $quote->completed_count = $claimedUserIds->isEmpty()
+            ? 0
+            : DB::table('question_answers_main')->where('status', 'complete')->whereIn('user_id', $claimedUserIds)->distinct('user_id')->count('user_id');
+        $quote->remaining_count = max(0, $quote->seat_count - (int) $quote->registered_count);
+
+        return $quote;
     }
 
     private function nextQuoteNumber(): string

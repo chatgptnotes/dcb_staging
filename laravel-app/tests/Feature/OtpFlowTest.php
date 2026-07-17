@@ -64,7 +64,7 @@ class OtpFlowTest extends TestCase
         // Step 1: submit signup → no account yet, OTP emailed, redirect to verify.
         $this->post('/sign-up', [
             'first_name' => 'Otp', 'last_name' => 'Flow', 'user_name' => self::USERNAME,
-            'dob' => '1990-01-01', 'email' => self::EMAIL,
+            'dob' => '01/01/1990', 'email' => self::EMAIL,
             'password' => 'Secret#2026', 'password_confirmation' => 'Secret#2026',
         ])->assertRedirect('verify-email-otp');
 
@@ -85,7 +85,7 @@ class OtpFlowTest extends TestCase
     {
         $this->post('/sign-up', [
             'first_name' => 'Otp', 'last_name' => 'Flow', 'user_name' => self::USERNAME,
-            'dob' => '1990-01-01', 'email' => self::EMAIL,
+            'dob' => '01/01/1990', 'email' => self::EMAIL,
             'password' => 'Secret#2026', 'password_confirmation' => 'Secret#2026',
         ]);
         $this->forceCode('register', '654321');
@@ -111,11 +111,11 @@ class OtpFlowTest extends TestCase
         $this->assertNotNull(User::where('email', self::EMAIL)->first());
     }
 
-    public function test_verified_purchase_signup_reaches_code_or_payment_choice(): void
+    public function test_verified_purchase_signup_reaches_checkout(): void
     {
         $this->post('/sign-up', [
             'first_name' => 'Otp', 'last_name' => 'Flow', 'user_name' => self::USERNAME,
-            'dob' => '1990-01-01', 'email' => self::EMAIL,
+            'dob' => '01/01/1990', 'email' => self::EMAIL,
             'password' => 'Secret#2026', 'password_confirmation' => 'Secret#2026',
             'intended_package' => 'decodemybrain-deep-dive',
             'purchase_flow' => '1',
@@ -123,9 +123,7 @@ class OtpFlowTest extends TestCase
 
         $this->forceCode('register', '654321');
         $this->post('/verify-email-otp', ['otp' => '654321'])
-            ->assertRedirect(route('access.choice'));
-
-        $this->get('/start/access')->assertOk()->assertSee('code');
+            ->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
     }
 
     public function test_login_requires_2fa_code(): void

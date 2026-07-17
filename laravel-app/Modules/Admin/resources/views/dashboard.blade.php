@@ -1,13 +1,11 @@
-@include('admin::layouts.header')
-<div class="content-wrapper"><div class="container-xxl flex-grow-1 container-p-y">
-  <h4 class="py-3 mb-4"><span class="text-muted fw-light">Dashboard</span></h4>
-  <div class="row g-4 mb-4">
-    <div class="col-sm-6 col-xl"><div class="card"><div class="card-body"><span class="text-muted">Registered users</span><h3 class="mb-0 mt-2">{{ $stats['registered'] }}</h3></div></div></div>
-    <div class="col-sm-6 col-xl"><div class="card"><div class="card-body"><span class="text-muted">Registered today</span><h3 class="mb-0 mt-2">{{ $stats['today'] }}</h3></div></div></div>
-    <div class="col-sm-6 col-xl"><div class="card"><div class="card-body"><span class="text-muted">Active paid access</span><h3 class="mb-0 mt-2">{{ $stats['paid'] }}</h3></div></div></div>
-    <div class="col-sm-6 col-xl"><div class="card"><div class="card-body"><span class="text-muted">Voucher users</span><h3 class="mb-0 mt-2">{{ $stats['voucher'] }}</h3></div></div></div>
-    <div class="col-sm-6 col-xl"><div class="card"><div class="card-body"><span class="text-muted">Organisation users</span><h3 class="mb-0 mt-2">{{ $stats['organization'] }}</h3></div></div></div>
-  </div>
-  <div class="card"><div class="d-flex justify-content-between align-items-center card-header"><h5 class="mb-0">Recent registrations</h5><a class="btn btn-sm btn-outline-primary" href="{{ url('admin/user-plan') }}">Open user management</a></div><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>User</th><th>Email</th><th>Package</th><th>Access source</th><th>Registered</th></tr></thead><tbody>@forelse($recentUsers as $user)<tr><td>{{ $user->display_name ?: '-' }}</td><td>{{ $user->email ?: '-' }}</td><td>{{ $user->package ?: 'free' }}</td><td><span class="badge bg-label-info">{{ $user->access_source }}</span></td><td>{{ $user->registered_at ? \Carbon\Carbon::parse($user->registered_at)->format('M d, Y H:i') : '-' }}</td></tr>@empty<tr><td colspan="5" class="text-center text-muted py-4">No customer registrations yet.</td></tr>@endforelse</tbody></table></div></div>
-</div></div>
-@include('admin::layouts.footer')
+@extends('admin::layouts.insights')
+@section('title','Dashboard')
+@section('active','dashboard')
+@section('actions')
+  <form method="get"><select class="range range-select" name="range" onchange="this.form.submit()"><option value="7d" @selected($range === '7d')>Last 7 days</option><option value="30d" @selected($range === '30d')>Last 30 days</option><option value="90d" @selected($range === '90d')>Last 90 days</option><option value="all" @selected($range === 'all')>All time</option></select></form>
+@endsection
+@section('content')
+<div class="metric-grid"><div class="metric"><div class="metric-label">Registered users</div><div class="metric-value">{{ number_format($stats['registered']) }}</div><div class="metric-detail">All customer accounts</div></div><div class="metric"><div class="metric-label">Assessments<br>completed</div><div class="metric-value">{{ number_format($stats['completed']) }}</div><div class="metric-detail">Completed attempts</div></div><div class="metric"><div class="metric-label">Revenue (individual)</div><div class="metric-value">${{ number_format($stats['revenue_minor'] / 100, 2) }}</div><div class="metric-detail">Selected period</div></div><div class="metric"><div class="metric-label">Active corporate<br>codes</div><div class="metric-value">{{ number_format($stats['active_codes']) }}</div><div class="metric-detail">Organisation access live</div></div></div>
+<div class="cards"><section class="panel"><div class="panel-head"><div><h2 class="panel-title">New corporate inquiries</h2><p class="panel-sub">Needs a first response</p></div><a class="view-link" href="{{ url('admin/organization-enquiries') }}">View all</a></div>@forelse($inquiries as $enquiry)<div class="list-row"><div><div class="row-name">{{ $enquiry->organization_name }}</div><div class="row-detail">{{ number_format($enquiry->group_size) }} people · {{ now()->parse($enquiry->created_at)->timezone(config('app.timezone'))->diffForHumans() }}</div></div><span class="badge {{ $enquiry->status === 'new' ? 'badge-new' : 'badge-talk' }}">{{ $enquiry->status === 'new' ? 'New' : 'In talks' }}</span></div>@empty<div class="empty">No new corporate inquiries.</div>@endforelse</section>
+<section class="panel"><div class="panel-head"><div><h2 class="panel-title">Recent payments</h2><p class="panel-sub">Individual purchases</p></div><a class="view-link" href="{{ url('admin/payments') }}">View all</a></div>@forelse($payments->take(3) as $payment)<div class="list-row"><div><div class="row-name">{{ $payment->display_name }}</div><div class="row-detail">{{ $payment->package }}</div></div><div class="amount">${{ number_format($payment->amount_minor / 100, 2) }}</div></div>@empty<div class="empty">No individual payments in this period.</div>@endforelse</section></div>
+@endsection

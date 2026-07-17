@@ -511,15 +511,19 @@ private function adoptGuestAnswersAndRedirect(Request $request)
         return redirect()->route('organization.invitation.complete');
     }
 
+    if (session('pending_organization_code')) {
+        return redirect()->route('access.code.complete');
+    }
+
     if (session('pending_voucher_id')) {
         return redirect()->route('voucher.complete');
     }
 
-    // The rebuilt public path deliberately asks whether this verified user has
-    // a code before sending them to ordinary checkout. Older paths retain the
-    // original direct-checkout behaviour below.
+    // The public funnel asks about a code before plan selection. Once a plan
+    // has been selected, registration/sign-in continues straight to checkout.
     if (session('new_purchase_flow') && session('intended_package')) {
-        return redirect()->route('access.choice');
+        session()->forget('new_purchase_flow');
+        return redirect()->route('checkout.start', session('intended_package'));
     }
 
     // If the user picked a plan on the landing page, take them straight to that
@@ -653,14 +657,17 @@ public function sign_up(Request $request) {
             'first_name' => 'required',
             'last_name' => 'required',
             'user_name' => 'required',
-            'dob' => 'required|date',
+            'dob' => 'required|date_format:d/m/Y',
             'email' => 'required|email',
             'password_confirmation' => 'required',
             'password' => 'required|confirmed|min:6',
         ]);
 
-        $dob = $request->dob;
-        $age = \Carbon\Carbon::parse($dob)->age;
+        $dateOfBirth = \Carbon\Carbon::createFromFormat('!d/m/Y', (string) $request->dob);
+        if (! $dateOfBirth->lt(today())) {
+            return back()->withInput()->withErrors(['dob' => 'Date of birth must be before today.']);
+        }
+        $age = $dateOfBirth->age;
         
          if ($age < 12) {
              return back()->with('fail', 'You must be at least 12 years old to register.');
@@ -670,7 +677,7 @@ public function sign_up(Request $request) {
             'username' => $request->user_name,
             'email' => $request->email,
             'display_name' => $request->first_name . ' ' . $request->last_name,
-            'date_of_birth' => $request->dob,
+            'date_of_birth' => $dateOfBirth->format('Y-m-d'),
             'password' => $request->password,
         ];
 
@@ -683,14 +690,13 @@ public function sign_up(Request $request) {
             session(['user_id' => $user_id]);
             
             
-            $dob = $request->dob; 
-            $age = \Carbon\Carbon::parse($dob)->age;
+            $age = $dateOfBirth->age;
     
             $wp_user = new WPUsers();
             $wp_user->user_id = $user_id;
             $wp_user->email = $request->email;
             $wp_user->display_name = $request->first_name . ' ' . $request->last_name;
-            $wp_user->date_of_birth = $request->dob;
+            $wp_user->date_of_birth = $dateOfBirth->format('Y-m-d');
             $wp_user->age = $age;
             $wp_user->package = 'free';
             $wp_user->save();
@@ -784,7 +790,7 @@ private function signUpNative(Request $request)
         'first_name' => 'required|string|max:100',
         'last_name'  => 'required|string|max:100',
         'user_name'  => 'required|string|max:60',
-        'dob'        => 'required|date|before:today',
+        'dob'        => 'required|date_format:d/m/Y',
         'email'      => 'required|email|max:191',
         'phone'      => 'nullable|string|max:32',
         'password_confirmation' => 'required',
@@ -800,7 +806,11 @@ private function signUpNative(Request $request)
     }
     RateLimiter::hit($throttleKey, 60);
 
-    $age = \Carbon\Carbon::parse($request->dob)->age;
+    $dateOfBirth = \Carbon\Carbon::createFromFormat('!d/m/Y', (string) $request->dob);
+    if (! $dateOfBirth->lt(today())) {
+        return back()->withInput()->withErrors(['dob' => 'Date of birth must be before today.']);
+    }
+    $age = $dateOfBirth->age;
     if ($age < 12) {
         return back()->withInput()->with('fail', 'You must be at least 12 years old to register.');
     }
@@ -823,7 +833,7 @@ private function signUpNative(Request $request)
         'username' => $username,
         'email' => $email,
         'display_name' => trim($request->first_name.' '.$request->last_name),
-        'date_of_birth' => \Carbon\Carbon::parse($request->dob)->format('Y-m-d'),
+        'date_of_birth' => $dateOfBirth->format('Y-m-d'),
         'billing_phone' => trim((string) $request->phone),
         'password_hash' => Hash::make($request->password),
     ];

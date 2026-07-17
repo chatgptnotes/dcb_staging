@@ -51,7 +51,7 @@ class NativeRegistrationTest extends TestCase
             'first_name' => 'Native',
             'last_name' => 'Tester',
             'user_name' => self::USERNAME,
-            'dob' => '2000-01-01',
+            'dob' => '01/01/2000',
             'email' => self::EMAIL,
             'phone' => '+44 7700 000000',
             'password' => 'Secret#2026',
@@ -61,7 +61,7 @@ class NativeRegistrationTest extends TestCase
 
     public function test_signup_page_loads(): void
     {
-        $this->get('/sign-up')->assertOk();
+        $this->get('/sign-up')->assertOk()->assertSee('DD/MM/YYYY');
     }
 
     public function test_valid_registration_creates_account_and_logs_in(): void
@@ -104,15 +104,14 @@ class NativeRegistrationTest extends TestCase
         $response->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
     }
 
-    public function test_new_public_purchase_registration_reaches_code_or_payment_choice(): void
+    public function test_new_public_purchase_registration_reaches_checkout(): void
     {
         $response = $this->post('/sign-up', $this->validPayload([
             'intended_package' => 'decodemybrain-deep-dive',
             'purchase_flow' => '1',
         ]));
 
-        $response->assertRedirect(route('access.choice'));
-        $this->get(route('access.choice'))->assertOk()->assertSee('One quick question before you start');
+        $response->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
     }
 
     public function test_duplicate_email_is_rejected(): void
@@ -139,7 +138,7 @@ class NativeRegistrationTest extends TestCase
 
     public function test_underage_is_rejected(): void
     {
-        $response = $this->post('/sign-up', $this->validPayload(['dob' => '2020-01-01']));
+        $response = $this->post('/sign-up', $this->validPayload(['dob' => '01/01/2020']));
         $response->assertSessionHas('fail');
         $this->assertNull(User::where('email', self::EMAIL)->first());
     }
@@ -148,7 +147,15 @@ class NativeRegistrationTest extends TestCase
     {
         // Carbon->age is absolute, so a future DOB could read as a valid age —
         // the before:today rule must block it.
-        $response = $this->post('/sign-up', $this->validPayload(['dob' => '2050-01-01']));
+        $response = $this->post('/sign-up', $this->validPayload(['dob' => '01/01/2050']));
+        $response->assertSessionHasErrors('dob');
+        $this->assertNull(User::where('email', self::EMAIL)->first());
+    }
+
+    public function test_iso_date_of_birth_format_is_rejected(): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload(['dob' => '2000-01-01']));
+
         $response->assertSessionHasErrors('dob');
         $this->assertNull(User::where('email', self::EMAIL)->first());
     }

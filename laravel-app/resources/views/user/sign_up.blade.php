@@ -189,7 +189,7 @@ body {
                     </div>
                     <div class="col-lg-6 px-0 ps-lg-0 pe-lg-1">
                         <label for="age" class="pb-2 form-label-signup" style="font-weight: 600">Date of Birth</label>
-                        <input type="date" class="form-control signup-form-placeholder" id="age" 
+                        <input type="text" class="form-control signup-form-placeholder" id="age" placeholder="DD/MM/YYYY" inputmode="numeric" autocomplete="bday" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" title="Enter the date as DD/MM/YYYY"
                             required style="border-radius:10px; border-color:rgb(233, 232, 232);" name="dob">
                             @if($errors->has("dob")) <p style="color:red;font-size:14px;">{{ $errors->first('dob') }}</p>@endif
                     </div>
@@ -241,4 +241,3 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
-
