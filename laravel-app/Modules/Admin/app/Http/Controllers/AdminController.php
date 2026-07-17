@@ -29,6 +29,7 @@ use App\Models\Questions;
 use App\Models\StarRatings;
 use App\Models\VideoTips;
 use App\Models\PricingPackage;
+use App\Services\Admin\AdminInsightsService;
 use App\Services\Billing\StripePriceManager;
 
 
@@ -69,35 +70,71 @@ class AdminController extends Controller
                }
          }
     }
-    public function dashboard()
+    public function dashboard(Request $request, AdminInsightsService $insights)
     {
-        $latestGrant = DB::table('entitlement_grants')->where('status', 'active')
-            ->selectRaw('wp_user_id, MAX(id) as id')->groupBy('wp_user_id');
-        $latestVoucher = DB::table('voucher_redemptions')
-            ->selectRaw('wp_user_id, MAX(id) as id')->groupBy('wp_user_id');
-        $base = DB::table('wp_users')
-            ->leftJoin('users', 'users.wp_user_id', '=', 'wp_users.user_id')
-            ->leftJoinSub($latestGrant, 'latest_grant', 'latest_grant.wp_user_id', '=', 'wp_users.user_id')
-            ->leftJoin('entitlement_grants as grants', 'grants.id', '=', 'latest_grant.id')
-            ->leftJoinSub($latestVoucher, 'latest_voucher', 'latest_voucher.wp_user_id', '=', 'wp_users.user_id')
-            ->leftJoin('voucher_redemptions as redemptions', 'redemptions.id', '=', 'latest_voucher.id')
-            ->where(function ($query) { $query->where('users.user_role', 2)->orWhereNotNull('wp_users.email'); });
-
+        $range = (string) $request->query('range', '30d');
+        [$start, $end] = $insights->range($range);
+        $payments = $insights->payments($start, $end);
+        $registered = $insights->users()->count();
+        $completed = DB::table('question_answers_main')->where('status', 'complete')->count();
+        $inquiries = DB::table('organization_enquiries')
+            ->whereIn('status', ['new', 'reviewed'])
+            ->orderByDesc('created_at')->limit(3)->get();
         $stats = [
-            'registered' => (clone $base)->count(),
-            'today' => (clone $base)->whereDate(DB::raw('COALESCE(users.created_at, wp_users.created_at)'), today())->count(),
-            'paid' => (clone $base)->whereNotNull('wp_users.package')->where('wp_users.package', '!=', 'free')->where('wp_users.package', '!=', '')->count(),
-            'voucher' => (clone $base)->where(function ($query) { $query->where('grants.source_type', 'voucher')->orWhereNotNull('redemptions.id'); })->count(),
-            'organization' => (clone $base)->where('grants.source_type', 'organization_seat')->count(),
+            'registered' => $registered,
+            'completed' => $completed,
+            'revenue_minor' => $payments->where('status', 'Paid')->sum('amount_minor'),
+            'active_codes' => DB::table('organization_quotes')->where('status', 'paid')->where('shared_code_enabled', true)->count(),
         ];
-        $recentUsers = $base->orderByDesc(DB::raw('COALESCE(users.created_at, wp_users.created_at)'))->limit(10)->get([
-            DB::raw('COALESCE(NULLIF(wp_users.display_name, ""), users.display_name) as display_name'),
-            DB::raw('COALESCE(NULLIF(wp_users.email, ""), users.email) as email'),
-            'wp_users.package',
-            DB::raw('COALESCE(users.created_at, wp_users.created_at) as registered_at'),
-            DB::raw("CASE WHEN grants.source_type = 'organization_seat' THEN 'Organisation code' WHEN grants.source_type = 'voucher' THEN 'Permanent voucher' WHEN redemptions.id IS NOT NULL THEN 'Voucher checkout' WHEN wp_users.package IS NOT NULL AND wp_users.package <> 'free' THEN 'Direct payment' ELSE 'Registered' END as access_source"),
-        ]);
-        return view('admin::dashboard', compact('stats', 'recentUsers'));
+        return view('admin::dashboard', compact('range', 'stats', 'inquiries', 'payments'));
+    }
+
+    public function users(Request $request, AdminInsightsService $insights)
+    {
+        $search = trim((string) $request->query('search', ''));
+        $filter = (string) $request->query('filter', 'all');
+        $filter = in_array($filter, ['all', 'completed', 'progress', 'corporate'], true) ? $filter : 'all';
+        $rows = $insights->users($search, $filter);
+
+        if ($request->boolean('export')) {
+            return response()->streamDownload(function () use ($rows) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['User', 'Email', 'Joined via', 'Assessment', 'Registered', 'Status']);
+                foreach ($rows as $row) {
+                    fputcsv($out, [$row->display_name, $row->email, $row->joined_via, $row->progress.'%', $row->registered_at, $row->assessment_status]);
+                }
+                fclose($out);
+            }, 'decodemybrain-users.csv', ['Content-Type' => 'text/csv']);
+        }
+
+        return view('admin::users', compact('rows', 'search', 'filter'));
+    }
+
+    public function payments(Request $request, AdminInsightsService $insights)
+    {
+        $range = (string) $request->query('range', '30d');
+        [$start, $end] = $insights->range($range);
+        $rows = $insights->payments($start, $end);
+        $summary = [
+            'collected_minor' => $rows->where('status', 'Paid')->sum('amount_minor'),
+            'collected_count' => $rows->where('status', 'Paid')->count(),
+            'refunded_minor' => $rows->where('status', 'Refunded')->sum('amount_minor'),
+            'refunded_count' => $rows->where('status', 'Refunded')->count(),
+            'failed_count' => $rows->where('status', 'Failed')->count(),
+        ];
+
+        if ($request->boolean('export')) {
+            return response()->streamDownload(function () use ($rows) {
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Transaction', 'Customer', 'Email', 'Plan', 'Coupon', 'Amount', 'Currency', 'Status', 'Date']);
+                foreach ($rows as $row) {
+                    fputcsv($out, [$row->transaction_id, $row->display_name, $row->email, $row->package, $row->coupon, number_format($row->amount_minor / 100, 2, '.', ''), strtoupper($row->currency), $row->status, $row->created_at]);
+                }
+                fclose($out);
+            }, 'decodemybrain-payments.csv', ['Content-Type' => 'text/csv']);
+        }
+
+        return view('admin::payments', compact('range', 'rows', 'summary'));
     }
     public function add_admin(Request $request)
     { if($request->isMethod('get')){
@@ -357,9 +394,12 @@ class AdminController extends Controller
 
         $this->validate($request, [
             'title'            => 'required',
-            'amount'           => 'required|numeric|min:0.01',
+            'amount'           => 'required|numeric|min:0',
             'currency'         => 'required|string',
             'button_text'      => 'required',
+            'cta_mode'         => 'nullable|in:purchase,enquiry',
+            'price_suffix'     => 'nullable|string|max:50',
+            'price_label'      => 'nullable|string|max:50',
             'type'             => 'required|in:subscription,one_time',
             'billing_interval' => 'required_if:type,subscription|in:month,year',
             'sort_order'       => 'required|integer|min:0',
@@ -381,7 +421,9 @@ class AdminController extends Controller
         // Admin catalogue changes must remain usable locally before Stripe is
         // configured. When the real amount changes without Stripe credentials,
         // clear the old Stripe price so checkout cannot charge a stale amount.
-        if (!$stripeUnavailable) {
+        $ctaMode = (string) $request->input('cta_mode', $package->cta_mode ?: 'purchase');
+        $isEnquiryOnly = $ctaMode === 'enquiry';
+        if (!$stripeUnavailable && !$isEnquiryOnly) {
             try {
                 $stripeResult = app(StripePriceManager::class)->ensurePrice(
                     $package,
@@ -412,10 +454,14 @@ class AdminController extends Controller
         $package->currency          = $newCurrency;
         $package->type              = $newType;
         $package->billing_interval  = $newInterval;
-        $package->price_label       = $package->formattedPrice(); // derived display
+        $package->price_label       = trim((string) $request->price_label) ?: $package->formattedPrice();
         $package->features          = $request->features;
         $package->button_text       = $request->button_text;
-        if ($stripeResult !== null) {
+        $package->cta_mode          = $ctaMode;
+        $package->price_suffix      = $request->price_suffix;
+        if ($isEnquiryOnly) {
+            $package->stripe_price_id = null;
+        } elseif ($stripeResult !== null) {
             $package->stripe_price_id = $stripeResult->priceId;
             $package->stripe_product_id = $stripeResult->productId;
         } elseif ($billingChanged) {

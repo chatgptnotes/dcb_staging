@@ -144,7 +144,7 @@ $admin_name =AdminDetails::where('user_id', Auth::user()->id)->value('name');
     </li>
 
       <!-- User Management System menu start -->
-      <li class="menu-item">
+      <li class="menu-item" style="display:none" aria-hidden="true">
         <a href="javascript:void(0);" class="menu-link menu-toggle" aria-expanded="false" aria-controls="user-management-menu">
           <i class="menu-icon tf-icons fa-solid fa-users-gear"></i>
           <div class="text-truncate" >User Management</div>

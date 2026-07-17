@@ -22,6 +22,8 @@ Route::prefix('admin')->group(function() {
     Route::match(['get', 'post'],'/', [AdminController::class, 'login']);
     Route::match(['get', 'post'],'/admins', [AdminController::class, 'admins'])->middleware('authAdmin');
     Route::match(['get', 'post'],'/dashboard', [AdminController::class, 'dashboard'])->middleware('authAdmin');
+    Route::get('/users', [AdminController::class, 'users'])->middleware('authAdmin');
+    Route::get('/payments', [AdminController::class, 'payments'])->middleware('authAdmin');
     Route::match(['get', 'post'],'/add-admin', [AdminController::class, 'add_admin'])->middleware('authAdmin');
     Route::match(['get', 'post'],'/edit-admin/{user_id}', [AdminController::class, 'edit_admin'])->middleware('authAdmin');
     Route::match(['get', 'post'],'/deactivate-admin/{user_id}', [AdminController::class, 'deactivate_admin'])->middleware('authAdmin');
@@ -42,6 +44,8 @@ Route::prefix('admin')->group(function() {
     Route::post('/vouchers/{id}/disable', [VoucherAdminController::class, 'disableVoucher'])->middleware('authAdmin');
     Route::post('/vouchers/{id}/retry-sync', [VoucherAdminController::class, 'retryVoucherSync'])->middleware('authAdmin');
     Route::post('/vouchers/{id}/reveal-code', [VoucherAdminController::class, 'revealVoucherCode'])->middleware('authAdmin');
+    Route::get('/enterprise-codes', [VoucherAdminController::class, 'enterpriseCodes'])->middleware('authAdmin');
+    Route::get('/enterprise-codes/export', [VoucherAdminController::class, 'exportEnterpriseCodeUsage'])->middleware('authAdmin');
     Route::get('/organization-quotes', [VoucherAdminController::class, 'quotes'])->middleware('authAdmin');
     Route::get('/organization-enquiries', [VoucherAdminController::class, 'enquiries'])->middleware('authAdmin');
     Route::post('/organization-enquiries/{id}', [VoucherAdminController::class, 'updateEnquiry'])->middleware('authAdmin');
@@ -52,6 +56,7 @@ Route::prefix('admin')->group(function() {
     Route::get('/organization-quotes/{id}', [VoucherAdminController::class, 'showQuote'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/mark-paid', [VoucherAdminController::class, 'markQuotePaid'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code', [VoucherAdminController::class, 'createSharedCode'])->middleware('authAdmin');
+    Route::post('/organization-quotes/{id}/shared-code/send-email', [VoucherAdminController::class, 'sendSharedCodeEmail'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/reveal', [VoucherAdminController::class, 'revealSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/disable', [VoucherAdminController::class, 'disableSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/invite-seats', [VoucherAdminController::class, 'inviteSeats'])->middleware('authAdmin');

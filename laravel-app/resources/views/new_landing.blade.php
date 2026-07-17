@@ -661,7 +661,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label" style="font-weight:600;">Date of birth</label>
-                            <input type="date" class="form-control" name="dob" value="{{ old('dob') }}" required style="border-radius:10px;">
+                            <input type="text" class="form-control" name="dob" value="{{ old('dob') }}" placeholder="DD/MM/YYYY" inputmode="numeric" autocomplete="bday" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" title="Enter the date as DD/MM/YYYY" required style="border-radius:10px;">
                             @error('dob')<small class="text-danger">{{ $message }}</small>@enderror
                         </div>
                         <div class="col-md-6 mb-3">

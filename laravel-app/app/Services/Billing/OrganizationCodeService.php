@@ -51,6 +51,26 @@ final class OrganizationCodeService
         $quote->update(['shared_code_enabled' => false]);
     }
 
+    /** Check a code before registration without assigning a seat yet. */
+    public function validateAvailability(string $code): OrganizationQuote
+    {
+        $quote = OrganizationQuote::where('shared_code_hash', $this->hash($code))->first();
+        if (!$quote || !$quote->shared_code_enabled || $quote->status !== 'paid') {
+            throw new RuntimeException('This organisation code is invalid or unavailable.');
+        }
+        if ($quote->expires_at && $quote->expires_at->isPast()) {
+            throw new RuntimeException('This organisation code has expired.');
+        }
+        if ($quote->access_term === 'fixed_term' && $quote->access_ends_at && $quote->access_ends_at->isPast()) {
+            throw new RuntimeException('This organisation access term has ended.');
+        }
+        if (! $quote->seats()->where('status', 'available')->exists()) {
+            throw new RuntimeException('All seats for this organisation code have already been claimed.');
+        }
+
+        return $quote;
+    }
+
     public function claim(string $code, User $user): OrganizationSeat
     {
         return DB::transaction(function () use ($code, $user) {

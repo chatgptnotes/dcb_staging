@@ -17,18 +17,16 @@ class PublicPurchaseController extends Controller
         ]);
     }
 
-    /** Store a selected paid plan for a signed-in customer before access/payment choice. */
+    /** A signed-in customer has already made the code/payment choice. */
     public function continuePlan(string $package, PackageCatalog $catalog): RedirectResponse
     {
-        if (! $catalog->exists($package) || $package === $catalog->freeSlug()) {
+        $pricingPackage = PricingPackage::where('slug', $package)->first();
+        if (! $catalog->exists($package) || $package === $catalog->freeSlug() || ($pricingPackage?->cta_mode ?? 'purchase') === 'enquiry') {
             return redirect()->route('public.plans')->with('fail', 'Choose a valid assessment before continuing.');
         }
 
-        session([
-            'intended_package' => $package,
-            'new_purchase_flow' => true,
-        ]);
+        session(['intended_package' => $package]);
 
-        return redirect()->route('access.choice');
+        return redirect()->route('checkout.start', $package);
     }
 }

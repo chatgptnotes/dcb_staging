@@ -8,13 +8,12 @@ use Tests\TestCase;
 
 class PublicPlanSelectionTest extends TestCase
 {
-    public function test_signed_in_customer_selecting_a_plan_reaches_code_or_payment_choice(): void
+    public function test_signed_in_customer_selecting_a_plan_reaches_checkout(): void
     {
         $this->withSession(['user_id' => 990555])
             ->get(route('public.plans.continue', 'decodemybrain-deep-dive'))
-            ->assertRedirect(route('access.choice'))
-            ->assertSessionHas('intended_package', 'decodemybrain-deep-dive')
-            ->assertSessionHas('new_purchase_flow', true);
+            ->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'))
+            ->assertSessionHas('intended_package', 'decodemybrain-deep-dive');
     }
 
     public function test_guest_cannot_use_the_signed_in_plan_continuation_route(): void

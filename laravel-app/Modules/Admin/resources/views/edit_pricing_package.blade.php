@@ -1,146 +1,27 @@
-@include('admin::layouts.header')
- <!-- Content wrapper -->
- <div class="content-wrapper">
-
-    <!-- Content -->
-
-      <div class="container-xxl flex-grow-1 container-p-y">
-
-
-<h4 class="py-3 mb-4">
-<span class="text-muted fw-light">Dashboard / <a href="{{url('admin/pricing-packages')}}">Pricing Packages</a> /</span> Edit Package
-</h4>
-
-<!-- Card Border Shadow -->
-<div class="row">
-        <div class="card mb-4">
-          <h5 class="card-header">Edit Pricing Package</h5>
-          @if(Session::has('success')) <div class="alert alert-success mt-2 mb-2">{{ Session::get('success') }}</div>@endif
-          @if(Session::has('fail')) <div class="alert alert-danger mt-2 mb-2">{{ Session::get('fail') }}</div>@endif
-          @if(Session::has('warning')) <div class="alert alert-warning mt-2 mb-2">{{ Session::get('warning') }}</div>@endif
-          <div class="card-body">
-            <form action="" method="post">
-            @csrf
-            <div class="row">
-
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Slug (fixed &mdash; not editable)</label>
-              <input type="text" class="form-control" value="{{$package->slug}}" disabled readonly/>
-            </div>
-
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Title</label>
-              <input type="text" class="form-control" name="title" value="{{ old('title', $package->title) }}"/>
-              @if($errors->has("title")) <div class="alert alert-danger mt-2">{{ $errors->first('title') }}</div>@endif
-            </div>
-
-            <div class="col-md-6 mb-3">
-              <label class="form-label">Subtitle <span class="text-muted">(optional)</span></label>
-              <input type="text" class="form-control" name="subtitle" value="{{ old('subtitle', $package->subtitle) }}"/>
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Price</label>
-              <input type="number" step="0.01" min="0.01" class="form-control" name="amount" value="{{ old('amount', $package->amount) }}"/>
-              <small class="text-success">Change this to update the public card immediately. When Stripe is configured, saving also updates what online checkout charges.</small>
-              @if($errors->has("amount")) <div class="alert alert-danger mt-2">{{ $errors->first('amount') }}</div>@endif
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Old Price <span class="text-muted">(strikethrough, optional)</span></label>
-              <input type="text" class="form-control" name="old_price_label" value="{{ old('old_price_label', $package->old_price_label) }}" placeholder="e.g. $499"/>
-              <small class="text-muted">Shown crossed-out next to the price (marketing only, never charged).</small>
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Currency</label>
-              <select class="form-select" name="currency">
-                @foreach(['usd' => 'USD ($)', 'eur' => 'EUR (€)', 'gbp' => 'GBP (£)', 'inr' => 'INR (₹)', 'aud' => 'AUD (A$)', 'cad' => 'CAD (C$)'] as $code => $lbl)
-                  <option value="{{ $code }}" {{ strtolower(old('currency', $package->currency)) === $code ? 'selected' : '' }}>{{ $lbl }}</option>
-                @endforeach
-              </select>
-              @if($errors->has("currency")) <div class="alert alert-danger mt-2">{{ $errors->first('currency') }}</div>@endif
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Button Text</label>
-              <input type="text" class="form-control" name="button_text" value="{{ old('button_text', $package->button_text) }}"/>
-              @if($errors->has("button_text")) <div class="alert alert-danger mt-2">{{ $errors->first('button_text') }}</div>@endif
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Type</label>
-              <select class="form-select" name="type" id="pkgType">
-                <option value="subscription" {{ old('type', $package->type) === 'subscription' ? 'selected' : '' }}>Subscription (recurring)</option>
-                <option value="one_time" {{ old('type', $package->type) === 'one_time' ? 'selected' : '' }}>One-time payment</option>
-              </select>
-              @if($errors->has("type")) <div class="alert alert-danger mt-2">{{ $errors->first('type') }}</div>@endif
-            </div>
-
-            <div class="col-md-3 mb-3" id="intervalWrap">
-              <label class="form-label">Billing Interval</label>
-              <select class="form-select" name="billing_interval">
-                <option value="month" {{ old('billing_interval', $package->billing_interval) === 'month' ? 'selected' : '' }}>Monthly</option>
-                <option value="year" {{ old('billing_interval', $package->billing_interval) === 'year' ? 'selected' : '' }}>Yearly</option>
-              </select>
-              <small class="text-muted">Only used for subscriptions.</small>
-              @if($errors->has("billing_interval")) <div class="alert alert-danger mt-2">{{ $errors->first('billing_interval') }}</div>@endif
-            </div>
-
-            <div class="col-md-12 mb-3">
-              <label class="form-label">Current Stripe price</label>
-              <input type="text" class="form-control" value="{{ $package->stripe_price_id ?: 'none yet — will be created on first save' }}" disabled readonly/>
-              <small class="text-muted">Auto-managed from this page. A new Stripe price is created whenever you save a package with no price, or change the amount, currency, type, or interval.</small>
-              @if(!$package->stripe_price_id)
-                <div class="alert alert-warning mt-2 mb-0">The public price can still be managed here. Online checkout remains disabled until valid Stripe keys are configured and this package is saved.</div>
-              @endif
-            </div>
-
-            <div class="col-md-12 mb-3">
-              <label class="form-label">Features <span class="text-muted">(one per line)</span></label>
-              <textarea class="form-control" name="features" rows="8">{{ old('features', $package->features) }}</textarea>
-            </div>
-
-            <div class="col-md-3 mb-3">
-              <label class="form-label">Display Order</label>
-              <input type="number" class="form-control" name="sort_order" value="{{ old('sort_order', $package->sort_order) }}" min="0"/>
-              @if($errors->has("sort_order")) <div class="alert alert-danger mt-2">{{ $errors->first('sort_order') }}</div>@endif
-            </div>
-
-            <div class="col-md-12 mb-3">
-              <label class="switch">
-                <input type="checkbox" class="switch-input" name="is_visible" value="1" {{ old('is_visible', $package->is_visible) ? 'checked' : '' }}/>
-                <span class="switch-toggle-slider">
-                  <span class="switch-on"></span>
-                  <span class="switch-off"></span>
-                </span>
-                <span class="switch-label">Visible on pricing page</span>
-              </label>
-            </div>
-
-            <div class="col-md-12">
-            <button type="submit" class="btn btn-primary mb-4 mt-4" style="width:250px; ">
-                <span class="bx bxs-save me-1"></span>Save
-            </button>
-            </div>
-            </div>
-            </form>
-          </div>
-        </div>
-</div>
-<!--/ Card Border Shadow -->
-
-
-
-      </div>
-      <!-- / Content -->
-
-@include('admin::layouts.footer')
-<script>
-  (function () {
-    var type = document.getElementById('pkgType');
-    var wrap = document.getElementById('intervalWrap');
-    function sync() { if (wrap) { wrap.style.display = (type && type.value === 'one_time') ? 'none' : ''; } }
-    if (type) { type.addEventListener('change', sync); sync(); }
-  })();
-</script>
+@extends('admin::layouts.insights')
+@section('title','Edit plan')
+@section('eyebrow','Individual · Plans')
+@section('active','plans')
+@section('actions')<a class="export" href="{{ url('admin/pricing-packages') }}">Back to plans</a>@endsection
+@section('content')
+  @if($errors->any())<div class="alert fail">{{ $errors->first() }}</div>@endif
+  <section class="panel form-panel"><div class="panel-head"><div><h2 class="panel-title">{{ $package->title }}</h2><p class="panel-sub">The slug is fixed because it is the entitlement key used by existing customers.</p></div></div><div style="padding:25px">
+    <form method="post"><input type="hidden" name="_token" value="{{ csrf_token() }}"><div class="form-grid">
+      <div class="field"><label>Package slug</label><input value="{{ $package->slug }}" disabled></div>
+      <div class="field"><label>Display order</label><input name="sort_order" type="number" min="0" value="{{ old('sort_order', $package->sort_order) }}" required></div>
+      <div class="field"><label>Title</label><input name="title" value="{{ old('title', $package->title) }}" required></div>
+      <div class="field"><label>Call-to-action</label><input name="button_text" value="{{ old('button_text', $package->button_text) }}" required></div>
+      <div class="field"><label>Charge amount</label><input name="amount" type="number" step="0.01" min="0" value="{{ old('amount', $package->amount) }}" required><span class="help">Used by individual purchase cards only.</span></div>
+      <div class="field"><label>Currency</label><select name="currency">@foreach(['usd'=>'USD ($)','inr'=>'INR (₹)','eur'=>'EUR (€)','gbp'=>'GBP (£)'] as $code=>$label)<option value="{{ $code }}" @selected(strtolower(old('currency',$package->currency))===$code)>{{ $label }}</option>@endforeach</select></div>
+      <div class="field"><label>Visible price label</label><input name="price_label" value="{{ old('price_label', $package->price_label) }}" placeholder="$29 or 5–6"></div>
+      <div class="field"><label>Price suffix</label><input name="price_suffix" value="{{ old('price_suffix', $package->price_suffix) }}" placeholder="once or people"></div>
+      <div class="field"><label>Action type</label><select name="cta_mode" id="cta_mode"><option value="purchase" @selected(old('cta_mode',$package->cta_mode ?? 'purchase') === 'purchase')>Individual purchase</option><option value="enquiry" @selected(old('cta_mode',$package->cta_mode ?? 'purchase') === 'enquiry')>Redirect to enquiry form</option></select></div>
+      <div class="field full"><label>Subtitle</label><input name="subtitle" value="{{ old('subtitle', $package->subtitle) }}"></div>
+      <div class="field full"><label>Features <span class="muted">(one per line)</span></label><textarea name="features">{{ old('features', $package->features) }}</textarea></div>
+      <div class="field" id="billing_type"><label>Billing type</label><select name="type" id="pkg_type"><option value="one_time" @selected(old('type',$package->type)==='one_time')>One-time payment</option><option value="subscription" @selected(old('type',$package->type)==='subscription')>Subscription</option></select></div>
+      <div class="field" id="billing_interval"><label>Billing interval</label><select name="billing_interval"><option value="month" @selected(old('billing_interval',$package->billing_interval)==='month')>Monthly</option><option value="year" @selected(old('billing_interval',$package->billing_interval)==='year')>Yearly</option></select></div>
+      <div class="field full"><label><input type="checkbox" name="is_visible" value="1" @checked(old('is_visible',$package->is_visible))> Visible on the public pricing page</label></div>
+    </div><div class="button-row" style="margin-top:26px"><button class="primary-button">Save changes</button><a class="secondary-button" href="{{ url('admin/pricing-packages') }}">Cancel</a></div></form>
+  </div></section>
+@endsection
+@push('scripts')<script>document.addEventListener('DOMContentLoaded',function(){var c=document.getElementById('cta_mode'),t=document.getElementById('pkg_type'),a=document.getElementById('billing_type'),b=document.getElementById('billing_interval');function sync(){var enquiry=c.value==='enquiry';a.style.display=enquiry?'none':'';b.style.display=enquiry||t.value==='one_time'?'none':''}c.onchange=sync;t.onchange=sync;sync()})</script>@endpush

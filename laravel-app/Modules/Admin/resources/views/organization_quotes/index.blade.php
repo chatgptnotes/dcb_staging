@@ -1,9 +1,7 @@
-@include('admin::layouts.header')
-<div class="content-wrapper"><div class="container-xxl flex-grow-1 container-p-y">
-  <div class="mb-3"><h4 class="mb-1">Business Agreements</h4><p class="text-muted mb-0">Agreements are created from organisation enquiries. Payment activates seats and the shared enterprise code.</p></div>
-  @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
-  <div class="card"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Reference</th><th>Organisation</th><th>Source enquiry</th><th>Package</th><th>Seats</th><th>Seats used</th><th>Total</th><th>Payment</th><th>Enterprise code</th><th></th></tr></thead><tbody>@forelse($quotes as $quote)<tr>
-    <td><span title="Internal reference only">{{ $quote->quote_number }}</span></td><td>{{ $quote->organization->name }}</td><td>{{ $quote->enquiry?->contact_name ?? 'Legacy agreement' }}</td><td>{{ $quote->package_slug }}</td><td>{{ $quote->seat_count }}</td><td>{{ $quote->used_seats_count }} / {{ $quote->seat_count }}</td><td>${{ number_format($quote->total_amount_minor/100,2) }}</td><td><span class="badge bg-label-{{ $quote->status === 'paid' ? 'success' : 'secondary' }}">{{ ucfirst($quote->status) }}</span></td><td><span class="badge bg-label-{{ $quote->shared_code_enabled ? 'success' : 'secondary' }}">{{ $quote->shared_code_enabled ? 'Active' : 'Not active' }}</span></td><td><a class="btn btn-sm btn-outline-primary" href="{{ url('admin/organization-quotes/'.$quote->id) }}">Open agreement</a></td>
-  </tr>@empty<tr><td colspan="10" class="text-center text-muted py-4">No business agreements yet. Create one from an organisation enquiry.</td></tr>@endforelse</tbody></table></div><div class="card-body">{{ $quotes->links() }}</div></div>
-</div></div>
-@include('admin::layouts.footer')
+@extends('admin::layouts.insights')
+@section('title','Agreements')
+@section('eyebrow','Corporate')
+@section('active','agreements')
+@section('content')
+<section class="panel table-panel"><table class="data-table"><thead><tr><th>AGREEMENT</th><th>ENTITY</th><th>CONTACT</th><th>Seats used</th><th>PAYMENT</th><th>ACCESS</th><th></th></tr></thead><tbody>@forelse($quotes as $quote)<tr><td><strong>{{ $quote->quote_number }}</strong><div class="secondary">{{ $quote->package_slug }}</div></td><td>{{ $quote->organization->name }}</td><td>{{ $quote->enquiry?->contact_name ?? $quote->organization->contact_name }}</td><td>{{ $quote->used_seats_count }} / {{ $quote->seat_count }}</td><td><span class="badge {{ $quote->status==='paid' ? 'badge-paid':'badge-not-started' }}">{{ ucfirst($quote->status) }}</span></td><td>{{ $quote->shared_code_enabled ? 'Active' : 'Not active' }}</td><td><a class="action-link" href="{{ url('admin/organization-quotes/'.$quote->id) }}">Open deal</a></td></tr>@empty<tr><td colspan="7" class="empty">No agreements yet.</td></tr>@endforelse</tbody></table></section><div style="margin-top:18px">{{ $quotes->links() }}</div>
+@endsection

@@ -42,6 +42,11 @@ final class PackageCatalog
 
         $plans = [];
         foreach ($rows as $row) {
+            // Enquiry-only cards are display/catalogue entries, not individual
+            // checkout products and must never be accepted by the purchase flow.
+            if (($row->cta_mode ?? 'purchase') === 'enquiry') {
+                continue;
+            }
             // Merge onto any config defaults for this slug so legacy keys
             // (e.g. wc_product_id for the wp driver) survive.
             $base = $config[$row->slug] ?? [];

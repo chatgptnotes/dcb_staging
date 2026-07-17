@@ -82,8 +82,10 @@ Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook']
 // separate and continues to work exactly as before.
 Route::post('/voucher/start', [VoucherController::class, 'start'])->name('voucher.start')->middleware('throttle:10,1');
 Route::get('/voucher/complete', [VoucherController::class, 'complete'])->name('voucher.complete')->middleware('authCustomer');
-Route::get('/start/access', [VoucherController::class, 'accessChoice'])->name('access.choice')->middleware('authCustomer');
-Route::post('/start/access/pay', [VoucherController::class, 'payMyself'])->name('access.pay')->middleware('authCustomer');
+Route::get('/start/access', [VoucherController::class, 'accessChoice'])->name('access.choice');
+Route::post('/start/access/pay', [VoucherController::class, 'payMyself'])->name('access.pay');
+Route::post('/start/access/code/validate', [VoucherController::class, 'beginCode'])->name('access.code.begin')->middleware('throttle:10,1');
+Route::get('/start/access/code/complete', [VoucherController::class, 'completeAccessCode'])->name('access.code.complete')->middleware('authCustomer');
 Route::post('/start/access/code', [VoucherController::class, 'redeemCode'])->name('access.code')->middleware(['authCustomer', 'throttle:10,1']);
 Route::get('/organization/invitation/complete', [VoucherController::class, 'completeInvitation'])->name('organization.invitation.complete')->middleware('authCustomer');
 Route::get('/organization/invitation/{token}', [VoucherController::class, 'invitation'])->name('organization.invitation');

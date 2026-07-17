@@ -11,6 +11,7 @@ use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\VoucherService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use RuntimeException;
 
 class VoucherController extends Controller
@@ -24,21 +25,61 @@ class VoucherController extends Controller
 
     public function accessChoice()
     {
-        $package = (string) session('intended_package');
-        if ($package === '') {
-            return redirect()->route('public.plans')->with('fail', 'Choose an assessment before continuing.');
-        }
-        return view('public.access_choice', ['package' => $package]);
+        return view('public.access_choice');
     }
 
     public function payMyself(): RedirectResponse
     {
-        $package = (string) session('intended_package');
-        if ($package === '') {
-            return redirect()->route('public.plans')->with('fail', 'Choose an assessment before continuing.');
+        session()->forget(['intended_package', 'new_purchase_flow']);
+        return redirect()->route('public.plans');
+    }
+
+    /** Validate a visitor's code, then defer its secure claim until sign-in. */
+    public function beginCode(Request $request): RedirectResponse
+    {
+        $data = $request->validate(['code' => ['required', 'string', 'max:64']]);
+        $code = trim($data['code']);
+        $voucher = $this->vouchers->findByCode($code);
+
+        try {
+            if ($voucher) {
+                $this->vouchers->validateForPackage($voucher, $voucher->package_slug);
+                session([
+                    'pending_voucher_id' => $voucher->id,
+                    'intended_package' => $voucher->package_slug,
+                ]);
+                return session('user_id')
+                    ? redirect()->route('voucher.complete')
+                    : redirect('sign-up')->with('success', 'Create or sign in to securely redeem your code.');
+            }
+
+            $this->organizationCodes->validateAvailability($code);
+            session(['pending_organization_code' => Crypt::encryptString($code)]);
+            return session('user_id')
+                ? redirect()->route('access.code.complete')
+                : redirect('sign-up')->with('success', 'Create or sign in to securely claim your organisation seat.');
+        } catch (RuntimeException $e) {
+            return back()->withInput()->with('fail', $e->getMessage());
         }
-        session()->forget('new_purchase_flow');
-        return redirect()->route('checkout.start', $package);
+    }
+
+    public function completeAccessCode(): RedirectResponse
+    {
+        $encryptedCode = (string) session('pending_organization_code');
+        $user = User::where('wp_user_id', session('user_id'))->first();
+        if ($encryptedCode === '' || ! $user) {
+            session()->forget('pending_organization_code');
+            return redirect()->route('access.choice')->with('fail', 'Your code session has expired. Please enter it again.');
+        }
+
+        try {
+            $seat = $this->organizationCodes->claim(Crypt::decryptString($encryptedCode), $user);
+            session()->forget(['pending_organization_code', 'intended_package', 'new_purchase_flow']);
+            return redirect('/questions/q1')->with('success', 'Your organisation code has been accepted for '.$seat->package_slug.'.');
+        } catch (\Throwable $e) {
+            session()->forget('pending_organization_code');
+            return redirect()->route('access.choice')->with('fail', 'The code is invalid or unavailable.');
+        }
     }
 
     /** Redeem either an individual voucher or an organisation's shared code. */
@@ -82,7 +123,7 @@ class VoucherController extends Controller
     {
         $data = $request->validate([
             'code' => ['required', 'string', 'max:64'],
-            'package' => ['required', 'string', 'max:120'],
+            'package' => ['nullable', 'string', 'max:120'],
         ]);
 
         $voucher = $this->vouchers->findByCode($data['code']);
@@ -91,14 +132,15 @@ class VoucherController extends Controller
         }
 
         try {
-            $this->vouchers->validateForPackage($voucher, $data['package']);
+            $package = (string) ($data['package'] ?: $voucher->package_slug);
+            $this->vouchers->validateForPackage($voucher, $package);
         } catch (RuntimeException $e) {
             return back()->withInput()->with('fail', $e->getMessage());
         }
 
         session([
             'pending_voucher_id' => $voucher->id,
-            'intended_package' => $data['package'],
+            'intended_package' => $package,
         ]);
 
         if (!session('user_id')) {

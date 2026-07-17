@@ -31,6 +31,8 @@ class PricingPackage extends Model
         'billing_interval',
         'features',
         'button_text',
+        'cta_mode',
+        'price_suffix',
         'stripe_price_id',
         'stripe_product_id',
         'type',

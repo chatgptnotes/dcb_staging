@@ -306,3 +306,108 @@ has 188 rows and is referenced by active application code.
    equivalents before claiming WordPress has been completely removed.
 5. Make registration plus mirror/entitlement creation atomic and backfill only
    native users missing their local mirror. Preserve legacy records.
+
+## Continuation — 16 July 2026 (IST)
+
+### Local runtime
+
+- Started the local MySQL server and PHP development server.
+- Confirmed the local site responds successfully at `http://127.0.0.1:8000`
+  (HTTP 200).
+
+### Admin commercial navigation and Agreements usage
+
+- Hid the legacy **Access Codes** item from the Admin sidebar only. Its route
+  and data remain intact for backward compatibility.
+- Set the requested Admin sidebar order: **Vouchers → Organisation Enquiries
+  → Agreements**.
+- Kept the existing enquiry-originated deal workflow unchanged: creating a
+  deal from an enquiry continues to create and open its Agreement.
+- Added a **Seats used** column to the Agreements list. It shows
+  `claimed seats / agreement seat count`, for example `2 / 5`.
+- The used count includes only seats whose status is `claimed`; available,
+  invited, and revoked seats do not count as used.
+- Added regression coverage in `AdminCommercialWorkflowTest` for the sidebar
+  order, hidden Access Codes navigation item, and claimed-seat count.
+- Validation at this point: focused commercial tests passed (5 tests, 33
+  assertions); the full suite passed (75 tests, 230 assertions).
+
+### Signed-in plan selection work
+
+- Identified that the public `/plans` page always opened its registration
+  modal, even for a user with a valid `user_id` session.
+- Added the authenticated route
+  `GET /plans/{package}/continue` (`public.plans.continue`). It validates the
+  package, stores it as `intended_package`, marks the new purchase flow, and
+  redirects the signed-in customer to the existing **Code or payment** page.
+- Added signed-in Plans-page behaviour so a selected plan continues through
+  that route instead of showing registration again. Guests retain the existing
+  registration/login modal.
+- Added `tests/Feature/PublicPlanSelectionTest.php` covering signed-in
+  continuation, guest protection, and invalid/free package rejection.
+- Focused plan/registration tests passed (14 tests, 43 assertions). The later
+  full-suite result is **78 tests, 239 assertions, all passed**.
+
+### Sign-up flow clarification — not yet implemented
+
+- The user clarified the desired rule: a **newly created account must return
+  to Home first**. Only after that authenticated user deliberately selects a
+  plan should the **Code or payment** page appear.
+- Current public plan registration submits `purchase_flow=1` and an intended
+  package. Shared post-auth redirect logic therefore sends a new user directly
+  to Code or payment. Removing only that flag would send the user directly to
+  checkout because the intended package remains.
+- Future fix: clear both selected-plan and purchase-flow state for a new
+  account before its ordinary Home redirect, while preserving voucher and
+  organisation-invitation completion flows. The signed-in continuation route
+  should remain the normal source of Code or payment.
+- After logout, the local session has no identity. An existing customer must
+  sign in again; clicking **Create account** is treated as a new-account
+  request until an existing email is detected.
+
+### Current configuration and OTP findings
+
+- Current `.env` configuration was reviewed (do not add secrets from it to
+  this record): native local authentication, `WP_SSO_BRIDGE=false`, local
+  MySQL (`decodemy_app`), file sessions, Cashier/Stripe payments, and a
+  pay-first funnel.
+- `OTP_ENABLED=true` is currently active. The mail driver is `log`, so OTP
+  email content is written locally to `storage/logs/laravel.log` rather than
+  delivered to customers. Configure a real mail provider before using this in
+  production.
+- The application stack is PHP 8.1+, Laravel 10, MySQL, Blade/HTML/CSS/JS,
+  Vite, Laravel Cashier/Stripe, Sanctum, PHPUnit, and the Nwidart Admin module.
+
+### Pricing save 500 incident — diagnosis and pending hardening
+
+- Admin price editing at `/admin/edit-pricing-package/1` showed a generic 500
+  page after a submitted amount of `$100,000,000`.
+- The controller converted that to `10,000,000,000` minor units, which exceeds
+  Stripe's maximum and the local `pricing_packages.amount` database range. The
+  database save then failed with `SQLSTATE[22003] Numeric value out of range`.
+- The failed attempt did not save. At audit time the catalog still contained:
+  Core `$2,030.00` and Plus `$49.00`.
+- Pending hardening: add a safe maximum validation rule and matching form
+  limit so impossible prices show an Admin validation message before Stripe or
+  MySQL is called. Do not alter Core's actual price without confirming the
+  intended amount.
+
+### GitHub repository cleanup and push
+
+- A first push to the new remote was blocked by GitHub Push Protection because
+  earlier history contained a Mapbox token in
+  `public/backend-assets/js/app-logistics-fleet.js` and Google OAuth values in
+  `config/mail.php`.
+- The local `.env` was already ignored; `git rm --cached .env` failed only
+  because the real ignored path is `laravel-app/.env` and it was not tracked.
+- Removed hard-coded OAuth values from source, changed mail configuration to
+  read `GOOGLE_OAUTH_*` values from `.env`, added empty placeholders to
+  `.env.example`, and removed the flagged Mapbox token from source. Do not put
+  real credentials into Git. Rotate/revoke any credentials that were exposed.
+- Created a clean one-commit history to remove the old secret-containing
+  commits. Current commit: `9bf7795 Initial commit`.
+- `main` now tracks `origin/main` at
+  `https://github.com/chatgptnotes/dcb_staging.git`.
+- A local safety stash remains for later review:
+  `stash@{0}: pre-clean-history`. Do not delete it until its contents have
+  been checked and confirmed unnecessary.

@@ -12,6 +12,7 @@ use App\Models\WPUsers;
 use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\OrganizationSeatService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Tests\TestCase;
 
 class OrganizationCodeServiceTest extends TestCase
@@ -131,6 +132,45 @@ class OrganizationCodeServiceTest extends TestCase
             'organization_quote_id' => $quote->id,
             'status' => 'claimed',
             'claimed_by_wp_user_id' => $wpId,
+        ]);
+    }
+
+    public function test_guest_can_validate_an_organisation_code_before_registration_then_claim_it_after_sign_in(): void
+    {
+        $wpId = max(9_250_000, (int) User::max('wp_user_id') + 101);
+        $user = User::create([
+            'username' => 'org_code_guest_'.$wpId,
+            'email' => 'org-code-'.$wpId.'@example.local', 'display_name' => 'Guest code test',
+            'password' => bcrypt('safe-test-password'), 'user_role' => '2', 'status' => 'active',
+        ]);
+        $user->wp_user_id = $wpId;
+        $user->save();
+        $mirror = new WPUsers();
+        $mirror->user_id = $wpId;
+        $mirror->email = $user->email;
+        $mirror->display_name = $user->display_name;
+        $mirror->package = 'free';
+        $mirror->save();
+        $organization = Organization::create(['name' => 'Guest organisation '.$wpId, 'contact_name' => 'Test contact', 'contact_email' => 'contact-'.$wpId.'@example.local', 'status' => 'active']);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id, 'quote_number' => 'GUEST-ORG-'.$wpId,
+            'package_slug' => 'decodemybrain-deep-dive', 'seat_count' => 1,
+            'unit_amount_minor' => 2900, 'discount_amount_minor' => 0, 'total_amount_minor' => 2900,
+            'billing_type' => 'one_time', 'access_term' => 'permanent', 'status' => 'paid', 'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $code = app(OrganizationCodeService::class)->createOrReplace($quote);
+
+        $this->post(route('access.code.begin'), ['code' => $code])
+            ->assertRedirect('sign-up')
+            ->assertSessionHas('pending_organization_code');
+
+        $this->withSession(['user_id' => $wpId, 'pending_organization_code' => Crypt::encryptString($code)])
+            ->get(route('access.code.complete'))
+            ->assertRedirect('/questions/q1');
+
+        $this->assertDatabaseHas('organization_seats', [
+            'organization_quote_id' => $quote->id, 'status' => 'claimed', 'claimed_by_wp_user_id' => $wpId,
         ]);
     }
 
