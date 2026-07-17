@@ -53,9 +53,10 @@ class AdminCommercialWorkflowTest extends TestCase
             ->post('/admin/edit-pricing-package/'.$package->id, [
                 'title' => 'Updated package',
                 'amount' => '37.50',
-                'currency' => 'usd',
-                'button_text' => 'Choose now',
-                'type' => 'one_time',
+            'currency' => 'usd',
+            'button_text' => 'Choose now',
+            'age_range' => 'Ages 13–15',
+            'type' => 'one_time',
                 'sort_order' => 0,
                 'is_visible' => '1',
             ])
@@ -67,9 +68,10 @@ class AdminCommercialWorkflowTest extends TestCase
             'title' => 'Updated package',
             'amount' => '37.50',
             'price_label' => '$37.50',
+            'age_range' => 'Ages 13–15',
         ]);
 
-        $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50');
+        $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50')->assertSee('Ages 13–15');
     }
 
     public function test_admin_price_change_reaches_customers_when_stripe_is_temporarily_unavailable(): void
@@ -235,15 +237,18 @@ class AdminCommercialWorkflowTest extends TestCase
             'contact_email' => $enquiry->contact_email,
             'package_slug' => 'decodemybrain-deep-dive',
             'seat_count' => 3,
-            'unit_amount' => '29.00',
-            'discount_amount' => '0.00',
-            'billing_type' => 'one_time',
-            'access_term' => 'permanent',
+            'agreed_amount' => '29.00',
             'payment_received' => '1',
-        ])->assertRedirect()->assertSessionHas('organization_code');
+        ])->assertRedirect('/admin/enterprise-codes')->assertSessionHas('organization_code');
 
         $quote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->firstOrFail();
         $this->assertSame('paid', $quote->status);
+        $this->assertSame(2900, $quote->total_amount_minor);
+        $this->assertSame(0, $quote->discount_amount_minor);
+        $this->assertSame('one_time', $quote->billing_type);
+        $this->assertSame('permanent', $quote->access_term);
+        $this->assertNull($quote->access_ends_at);
+        $this->assertNull($quote->expires_at);
         $this->assertTrue($quote->shared_code_enabled);
         $this->assertSame(3, $quote->seats()->count());
 

@@ -174,6 +174,66 @@ class OrganizationCodeServiceTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_disable_and_reenable_the_same_existing_organisation_code(): void
+    {
+        $suffix = (string) max(9_275_000, (int) User::max('wp_user_id') + 101);
+        $organization = Organization::create([
+            'name' => 'Toggle organisation '.$suffix,
+            'contact_name' => 'Toggle contact',
+            'contact_email' => 'contact-'.$suffix.'@example.local',
+            'status' => 'active',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TOGGLE-ORG-'.$suffix,
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 1,
+            'unit_amount_minor' => 2900,
+            'discount_amount_minor' => 0,
+            'total_amount_minor' => 2900,
+            'billing_type' => 'one_time',
+            'access_term' => 'permanent',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $codes = app(OrganizationCodeService::class);
+        $code = $codes->createOrReplace($quote);
+        $encryptedCode = $quote->fresh()->shared_code_encrypted;
+
+        $admin = new User();
+        $admin->email = 'org-admin-'.$suffix.'@example.local';
+        $admin->password = bcrypt('safe-test-password');
+        $admin->user_role = '1';
+        $admin->status = 'active';
+        $admin->save();
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/status', ['enabled' => '0'])
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'disabled'));
+
+        $quote->refresh();
+        $this->assertFalse($quote->shared_code_enabled);
+        $this->assertSame($encryptedCode, $quote->shared_code_encrypted);
+        try {
+            $codes->validateAvailability($code);
+            $this->fail('A disabled enterprise code must not be valid.');
+        } catch (\RuntimeException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/status', ['enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'enabled'));
+
+        $quote->refresh();
+        $this->assertTrue($quote->shared_code_enabled);
+        $this->assertSame($encryptedCode, $quote->shared_code_encrypted);
+        $this->assertSame($quote->id, $codes->validateAvailability($code)->id);
+    }
+
     public function test_admin_creates_an_unpaid_agreement_from_an_enquiry_then_payment_activates_the_shared_code(): void
     {
         $suffix = (string) max(9_300_000, (int) User::max('wp_user_id') + 101);
@@ -202,10 +262,7 @@ class OrganizationCodeServiceTest extends TestCase
                 'contact_phone' => '+1 555 0100',
                 'package_slug' => 'decodemybrain-deep-dive',
                 'seat_count' => 2,
-                'unit_amount' => '29.00',
-                'discount_amount' => '0.00',
-                'billing_type' => 'one_time',
-                'access_term' => 'permanent',
+                'agreed_amount' => '29.00',
             ])
             ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'Record payment'));
 

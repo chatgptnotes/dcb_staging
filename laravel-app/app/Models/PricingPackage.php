@@ -24,6 +24,7 @@ class PricingPackage extends Model
         'slug',
         'title',
         'subtitle',
+        'age_range',
         'price_label',
         'old_price_label',
         'amount',

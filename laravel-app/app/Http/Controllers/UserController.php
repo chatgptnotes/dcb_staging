@@ -820,11 +820,15 @@ private function signUpNative(Request $request)
 
     // Fast, friendly pre-check (the DB unique indexes below are the real guard).
     if (User::whereRaw('LOWER(username) = ?', [mb_strtolower($username)])->exists()) {
-        return back()->withInput()->with('fail', 'That username is already taken.');
+        return back()->withInput()->withErrors([
+            'user_name' => 'That username is already taken.',
+        ]);
     }
     if (User::whereRaw('LOWER(email) = ?', [$email])->exists()
         || WPUsers::whereRaw('LOWER(email) = ?', [$email])->exists()) {
-        return back()->withInput()->with('fail', 'An account with that email already exists. Please sign in.');
+        return back()->withInput()->withErrors([
+            'email' => 'An account with that email already exists. Please sign in.',
+        ]);
     }
 
     // Validated, unique signup data. Password is pre-hashed so it is never

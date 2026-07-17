@@ -399,6 +399,7 @@ class AdminController extends Controller
             'button_text'      => 'required',
             'cta_mode'         => 'nullable|in:purchase,enquiry',
             'price_suffix'     => 'nullable|string|max:50',
+            'age_range'        => 'nullable|string|max:50',
             'price_label'      => 'nullable|string|max:50',
             'type'             => 'required|in:subscription,one_time',
             'billing_interval' => 'required_if:type,subscription|in:month,year',
@@ -449,6 +450,7 @@ class AdminController extends Controller
 
         $package->title             = $request->title;
         $package->subtitle          = $request->subtitle;
+        $package->age_range         = $request->age_range;
         $package->old_price_label   = $request->old_price_label;
         $package->amount            = $newAmount;
         $package->currency          = $newCurrency;

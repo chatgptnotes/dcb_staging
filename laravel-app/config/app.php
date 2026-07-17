@@ -55,6 +55,10 @@ return [
 
     'otp_enabled' => env('OTP_ENABLED', false),
 
+    // Local-only fixed OTP for development. Keep this empty in every shared
+    // or production environment so real email delivery is always used.
+    'otp_test_code' => env('OTP_TEST_CODE'),
+
     /*
     |--------------------------------------------------------------------------
     | WordPress SSO bridge (transition only)

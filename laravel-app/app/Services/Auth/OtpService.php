@@ -56,6 +56,12 @@ final class OtpService
             ]
         );
 
+        // Local signups should not depend on external SMTP. The matching test
+        // code is accepted in verify(), while production keeps real delivery.
+        if (app()->environment('local') && filled(config('app.otp_test_code'))) {
+            return true;
+        }
+
         Mail::to($email)->send(new OtpMail($code, $purpose, self::TTL_MINUTES));
 
         return true;
@@ -93,7 +99,7 @@ final class OtpService
             // Local checkout and registration testing must not depend on an
             // external inbox. This is deliberately restricted to the local
             // environment and still requires a pending OTP row.
-            $localTestCode = app()->environment('local') ? env('OTP_TEST_CODE') : null;
+            $localTestCode = app()->environment('local') ? config('app.otp_test_code') : null;
             if (is_string($localTestCode) && $localTestCode !== '' && hash_equals($localTestCode, $code)) {
                 DB::table('email_otps')->where('id', $row->id)->delete();
                 return true;

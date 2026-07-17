@@ -172,9 +172,6 @@ class VoucherAdminController extends Controller
     {
         $quotes = OrganizationQuote::with(['organization', 'enquiry'])
             ->withCount(['seats as registered_count' => fn ($query) => $query->where('status', 'claimed')])
-            ->where(function ($query) {
-                $query->whereNotNull('shared_code_hint')->orWhere('status', 'paid');
-            })
             ->latest('paid_at')->latest()->paginate(30);
 
         $quotes->getCollection()->transform(fn (OrganizationQuote $quote) => $this->withEnterpriseUsage($quote));
@@ -257,31 +254,16 @@ class VoucherAdminController extends Controller
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'package_slug' => ['required', 'string', 'max:120'],
             'seat_count' => ['required', 'integer', 'min:1', 'max:100000'],
-            'unit_amount' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
-            'discount_amount' => ['nullable', 'regex:/^\d+(\.\d{1,2})?$/'],
-            'billing_type' => ['required', 'in:one_time,subscription'],
-            'access_term' => ['required', 'in:permanent,fixed_term,subscription_active'],
-            'access_ends_at' => ['nullable', 'date', 'after:now'],
-            'expires_at' => ['nullable', 'date', 'after:now'],
+            'agreed_amount' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
             'internal_notes' => ['nullable', 'string', 'max:5000'],
-            'customer_notes' => ['nullable', 'string', 'max:5000'],
             'payment_received' => ['nullable', 'boolean'],
         ]);
         if (!$catalog->exists($data['package_slug']) || $data['package_slug'] === $catalog->freeSlug()) {
             return back()->withInput()->with('fail', 'Choose a valid paid package.');
         }
-        if ($data['access_term'] === 'fixed_term' && empty($data['access_ends_at'])) {
-            return back()->withInput()->with('fail', 'Fixed-term access needs an end date.');
-        }
+        $agreedAmount = $this->usdToMinor($data['agreed_amount']);
 
-        $unit = $this->usdToMinor($data['unit_amount']);
-        $discount = $this->usdToMinor($data['discount_amount'] ?? '0');
-        $subtotal = $unit * (int) $data['seat_count'];
-        if ($discount > $subtotal) {
-            return back()->withInput()->with('fail', 'Discount cannot exceed the quote subtotal.');
-        }
-
-        [$quote, $alreadyExists] = DB::transaction(function () use ($data, $unit, $discount, $subtotal) {
+        [$quote, $alreadyExists] = DB::transaction(function () use ($data, $agreedAmount) {
             $enquiry = OrganizationEnquiry::lockForUpdate()->findOrFail($data['organization_enquiry_id']);
             $existingQuote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->lockForUpdate()->first();
             if ($existingQuote) {
@@ -299,16 +281,16 @@ class VoucherAdminController extends Controller
                 'quote_number' => $this->nextQuoteNumber(),
                 'package_slug' => $data['package_slug'],
                 'seat_count' => $data['seat_count'],
-                'unit_amount_minor' => $unit,
-                'discount_amount_minor' => $discount,
-                'total_amount_minor' => $subtotal - $discount,
+                'unit_amount_minor' => $agreedAmount,
+                'discount_amount_minor' => 0,
+                'total_amount_minor' => $agreedAmount,
                 'currency' => 'usd',
-                'billing_type' => $data['billing_type'],
-                'access_term' => $data['access_term'],
-                'access_ends_at' => $data['access_ends_at'] ?? null,
-                'expires_at' => $data['expires_at'] ?? null,
+                'billing_type' => 'one_time',
+                'access_term' => 'permanent',
+                'access_ends_at' => null,
+                'expires_at' => null,
                 'internal_notes' => $data['internal_notes'] ?? null,
-                'customer_notes' => $data['customer_notes'] ?? null,
+                'customer_notes' => null,
                 'created_by_admin_id' => Auth::id(),
                 'status' => 'draft',
             ]);
@@ -328,20 +310,20 @@ class VoucherAdminController extends Controller
         if ($request->boolean('payment_received')) {
             try {
                 [, $code] = $this->activateQuote($quote->id, $seats, $codes);
-                $response = redirect('admin/organization-quotes/'.$quote->id)
+                $response = redirect('admin/enterprise-codes')
                     ->with('success', 'Deal saved. Payment received, seats allocated, and the enterprise code is active.');
                 if ($code) {
                     $response->with('organization_code', $code);
                 }
                 return $response;
             } catch (RuntimeException $e) {
-                return redirect('admin/organization-quotes/'.$quote->id)
+                return redirect('admin/enterprise-codes')
                     ->with('fail', 'Deal was saved, but payment could not be activated: '.$e->getMessage());
             }
         }
 
-        return redirect('admin/organization-quotes/'.$quote->id)
-            ->with('success', 'Agreement created. Record payment to generate the organisation access code.');
+        return redirect('admin/enterprise-codes')
+            ->with('success', 'Agreement saved. Record payment from the agreement to generate its enterprise code.');
     }
 
     public function showQuote(int $id)
@@ -357,7 +339,7 @@ class VoucherAdminController extends Controller
             return back()->with('fail', $e->getMessage());
         }
 
-        $response = back()->with(
+        $response = redirect('admin/enterprise-codes')->with(
             'success',
             $code ? 'Payment recorded. Seats and the shared organisation access code are active.' : 'Payment was already recorded; organisation access remains active.'
         );
@@ -424,8 +406,37 @@ class VoucherAdminController extends Controller
     public function disableSharedCode(int $id, OrganizationCodeService $codes): RedirectResponse
     {
         $quote = OrganizationQuote::findOrFail($id);
-        $codes->disable($quote);
+        try {
+            $codes->disable($quote);
+        } catch (RuntimeException $e) {
+            return back()->with('fail', $e->getMessage());
+        }
+
         return back()->with('success', 'Shared organisation code disabled.');
+    }
+
+    /** Toggle an existing code without issuing a replacement code. */
+    public function setSharedCodeEnabled(Request $request, int $id, OrganizationCodeService $codes): RedirectResponse
+    {
+        $data = $request->validate(['enabled' => ['required', 'boolean']]);
+
+        try {
+            $quote = DB::transaction(function () use ($id, $data, $codes): OrganizationQuote {
+                $quote = OrganizationQuote::lockForUpdate()->findOrFail($id);
+                $codes->setEnabled($quote, (bool) $data['enabled']);
+
+                return $quote->fresh();
+            });
+        } catch (RuntimeException $e) {
+            return back()->with('fail', $e->getMessage());
+        }
+
+        return back()->with(
+            'success',
+            $quote->shared_code_enabled
+                ? 'Enterprise code enabled. The existing code can be used again.'
+                : 'Enterprise code disabled. It can no longer be used.'
+        );
     }
 
     public function inviteSeats(Request $request, int $id, OrganizationSeatService $seats): RedirectResponse

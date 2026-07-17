@@ -48,7 +48,20 @@ final class OrganizationCodeService
 
     public function disable(OrganizationQuote $quote): void
     {
-        $quote->update(['shared_code_enabled' => false]);
+        $this->setEnabled($quote, false);
+    }
+
+    /** Enable or disable an existing enterprise code without replacing it. */
+    public function setEnabled(OrganizationQuote $quote, bool $enabled): void
+    {
+        if ($quote->status !== 'paid') {
+            throw new RuntimeException('Record payment before changing the enterprise code status.');
+        }
+        if (! $quote->shared_code_hash || ! $quote->shared_code_encrypted) {
+            throw new RuntimeException('Generate an enterprise code before changing its status.');
+        }
+
+        $quote->update(['shared_code_enabled' => $enabled]);
     }
 
     /** Check a code before registration without assigning a seat yet. */
