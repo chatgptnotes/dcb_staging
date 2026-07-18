@@ -33,6 +33,8 @@ use App\Models\DimensionalQuestionAnswerMain;
 use App\Models\DimensionalQuestionAnswers;
 use App\Models\AccessCodes;
 use App\Models\WPUsers;
+use App\Models\PricingPackage;
+use App\Services\Billing\PlanAgeEligibilityService;
 
 use App\Http\Controllers\BrainResultsController;
 
@@ -790,6 +792,7 @@ private function signUpNative(Request $request)
     }
     try {
         $this->validatePendingOrganizationCodeAge($age);
+        $this->validateIntendedPackageAge($dateOfBirth->format('Y-m-d'));
     } catch (\RuntimeException $e) {
         return back()->withInput()->withErrors(['dob' => $e->getMessage()]);
     }
@@ -855,6 +858,20 @@ private function rememberPurchaseFlow(Request $request): void
     if ((string) $request->input('purchase_flow', $request->query('purchase_flow', '')) === '1') {
         session(['new_purchase_flow' => true]);
     }
+}
+
+/** Reject an age-ineligible selected individual plan before creating an account. */
+private function validateIntendedPackageAge(string $dateOfBirth): void
+{
+    $package = (string) session('intended_package');
+    if ($package === '') {
+        return;
+    }
+
+    app(PlanAgeEligibilityService::class)->assertEligible(
+        PricingPackage::where('slug', $package)->first(),
+        $dateOfBirth,
+    );
 }
 
 /** Reject an out-of-range pending organisation code before account creation. */

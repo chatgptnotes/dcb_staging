@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\WPUsers;
+use App\Models\PricingPackage;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -24,7 +25,7 @@ class NativeRegistrationTest extends TestCase
         parent::setUp();
         config()->set('app.auth_driver', 'native');
         config()->set('packages.free_slug', 'free');
-        // These tests cover the free-first, direct (non-OTP) signup → /intro.
+        // These tests cover the free-first, direct (non-OTP) signup → intro.
         config()->set('packages.funnel', 'free_first');
         config()->set('app.otp_enabled', false);
         $this->cleanup();
@@ -43,6 +44,7 @@ class NativeRegistrationTest extends TestCase
         if (!empty($ids)) {
             WPUsers::whereIn('user_id', $ids)->delete();
         }
+        PricingPackage::where('slug', 'age-restricted-signup-test')->delete();
     }
 
     private function validPayload(array $overrides = []): array
@@ -62,6 +64,13 @@ class NativeRegistrationTest extends TestCase
     public function test_signup_page_loads(): void
     {
         $this->get('/sign-up')->assertOk()->assertSee('DD/MM/YYYY');
+    }
+
+    public function test_login_page_sends_new_visitors_to_the_access_choice(): void
+    {
+        $this->get('/sign-in')
+            ->assertOk()
+            ->assertSee(route('access.choice'), false);
     }
 
     public function test_valid_registration_creates_account_and_logs_in(): void
@@ -99,6 +108,7 @@ class NativeRegistrationTest extends TestCase
 
         $response = $this->post('/sign-up', $this->validPayload([
             'intended_package' => 'decodemybrain-deep-dive',
+            'dob' => now()->subYears(13)->subDay()->format('d/m/Y'),
         ]));
 
         $response->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
@@ -109,9 +119,37 @@ class NativeRegistrationTest extends TestCase
         $response = $this->post('/sign-up', $this->validPayload([
             'intended_package' => 'decodemybrain-deep-dive',
             'purchase_flow' => '1',
+            'dob' => now()->subYears(13)->subDay()->format('d/m/Y'),
         ]));
 
         $response->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
+    }
+
+    public function test_age_ineligible_plan_selection_does_not_create_an_account(): void
+    {
+        PricingPackage::create([
+            'slug' => 'age-restricted-signup-test',
+            'title' => 'Ages 12 to 15',
+            'amount' => 20,
+            'currency' => 'usd',
+            'price_label' => '$20',
+            'button_text' => 'Choose now',
+            'type' => 'one_time',
+            'minimum_age' => 12,
+            'maximum_age' => 15,
+            'is_visible' => true,
+            'sort_order' => 99,
+        ]);
+
+        $response = $this->post('/sign-up', $this->validPayload([
+            'intended_package' => 'age-restricted-signup-test',
+            'purchase_flow' => '1',
+        ]));
+
+        $response->assertSessionHasErrors([
+            'dob' => 'This assessment is available only to ages 12–15.',
+        ]);
+        $this->assertNull(User::where('email', self::EMAIL)->first());
     }
 
     public function test_duplicate_email_is_rejected(): void
@@ -146,6 +184,7 @@ class NativeRegistrationTest extends TestCase
             'intended_package' => 'decodemybrain-deep-dive',
             'purchase_flow' => '1',
             'registration_form' => '1',
+            'dob' => now()->subYears(13)->subDay()->format('d/m/Y'),
         ]);
 
         $response = $this->from(route('public.plans'))->post('/sign-up', $payload);

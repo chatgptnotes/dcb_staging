@@ -115,7 +115,7 @@ class OtpFlowTest extends TestCase
     {
         $this->post('/sign-up', [
             'first_name' => 'Otp', 'last_name' => 'Flow', 'user_name' => self::USERNAME,
-            'dob' => '01/01/1990', 'email' => self::EMAIL,
+            'dob' => now()->subYears(13)->subDay()->format('d/m/Y'), 'email' => self::EMAIL,
             'password' => 'Secret#2026', 'password_confirmation' => 'Secret#2026',
             'intended_package' => 'decodemybrain-deep-dive',
             'purchase_flow' => '1',
