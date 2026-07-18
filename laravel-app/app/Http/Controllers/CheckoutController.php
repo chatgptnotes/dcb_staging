@@ -10,6 +10,7 @@ use App\Models\WPUsers;
 use App\Services\Billing\EntitlementService;
 use App\Services\Billing\CheckoutPaymentRecorder;
 use App\Services\Billing\PackageCatalog;
+use App\Services\Billing\PlanAgeEligibilityService;
 use App\Services\Billing\StripePriceManager;
 use App\Services\Billing\VoucherService;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class CheckoutController extends Controller
         private EntitlementService $entitlements,
         private VoucherService $vouchers,
         private CheckoutPaymentRecorder $payments,
+        private PlanAgeEligibilityService $ageEligibility,
     ) {
     }
 
@@ -55,6 +57,22 @@ class CheckoutController extends Controller
             return redirect('sign-up')->with('fail', 'Create your account to continue to secure checkout.');
         }
 
+        $user = User::where('wp_user_id', session('user_id'))->first();
+        if ($user === null) {
+            session(['intended_package' => $package]);
+
+            return redirect('sign-in')->with('fail', 'Please sign in again to continue to secure checkout.');
+        }
+
+        try {
+            $this->ageEligibility->assertEligible(
+                PricingPackage::where('slug', $package)->first(),
+                $user->date_of_birth,
+            );
+        } catch (\RuntimeException $e) {
+            return redirect()->route('public.plans')->with('fail', $e->getMessage());
+        }
+
         // A local/admin-managed package may not have a Stripe price yet. Try
         // to create or repair it before deciding the plan is unavailable.
         $this->repairPackagePriceIfNeeded($package);
@@ -66,13 +84,6 @@ class CheckoutController extends Controller
 
         $successUrl = route('checkout.success').'?session_id={CHECKOUT_SESSION_ID}';
         $cancelUrl = route('checkout.cancel');
-
-        $user = User::where('wp_user_id', session('user_id'))->first();
-        if ($user === null) {
-            session(['intended_package' => $package]);
-
-            return redirect('sign-in')->with('fail', 'Please sign in again to continue to secure checkout.');
-        }
 
         // Pass the WP id so the webhook can attribute the purchase even if the
         // Stripe customer was created fresh.

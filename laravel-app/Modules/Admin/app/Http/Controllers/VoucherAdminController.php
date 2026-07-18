@@ -6,6 +6,7 @@ namespace Modules\Admin\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Mail\OrganizationAccessCodeMail;
+use App\Mail\OrganizationCodeUsageMail;
 use App\Models\Organization;
 use App\Models\OrganizationEnquiry;
 use App\Models\OrganizationQuote;
@@ -405,6 +406,29 @@ class VoucherAdminController extends Controller
         }
 
         return back()->with('success', 'Organisation code emailed to '.$enquiry->contact_email.'.');
+    }
+
+    /** Email the enquiry contact a code-usage summary without exposing the code. */
+    public function sendSharedCodeUsageEmail(int $id): RedirectResponse
+    {
+        $quote = OrganizationQuote::with(['organization', 'enquiry'])
+            ->withCount(['seats as claimed_count' => fn ($query) => $query->where('status', 'claimed')])
+            ->findOrFail($id);
+        $enquiry = $quote->enquiry;
+
+        if (! $enquiry || ! filter_var($enquiry->contact_email, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('fail', 'This agreement has no valid enquiry contact email to send the usage update to.');
+        }
+
+        try {
+            Mail::to($enquiry->contact_email, $enquiry->contact_name)
+                ->send(new OrganizationCodeUsageMail($quote, (int) $quote->seat_count, (int) $quote->claimed_count));
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->with('fail', 'The organisation usage update email could not be sent. Please try again.');
+        }
+
+        return back()->with('success', 'Organisation usage update emailed to '.$enquiry->contact_email.'.');
     }
 
     /** Reveal the real redeemable organisation code; the visible hint is not a code. */

@@ -487,9 +487,9 @@ class AdminController extends Controller
             $msg = 'Pricing package updated locally. Stripe is not configured, so online checkout is disabled until Stripe keys are added and this package is saved again.';
         } elseif ($stripeSyncError !== null) {
             $msg = 'Pricing package updated and is live on customer pages. Stripe could not be reached, so online checkout for this package is paused until Stripe sync succeeds.';
-        } elseif ($stripeResult->replacedInvalid) {
+        } elseif ($stripeResult !== null && $stripeResult->replacedInvalid) {
             $msg = 'Pricing updated. The stale Stripe price was replaced and customers will now be charged ' . $package->formattedPrice() . '.';
-        } elseif ($stripeResult->created) {
+        } elseif ($stripeResult !== null && $stripeResult->created) {
             $msg = 'Pricing updated. Customers will now be charged ' . $package->formattedPrice() . '.';
         } else {
             $msg = 'Pricing package updated.';

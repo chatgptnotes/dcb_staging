@@ -8,9 +8,12 @@ use App\Models\OrganizationEnquiry;
 use App\Models\Organization;
 use App\Models\OrganizationQuote;
 use App\Mail\OrganizationAccessCodeMail;
+use App\Mail\OrganizationCodeUsageMail;
+use App\Models\OrganizationSeat;
 use App\Models\PricingPackage;
 use App\Models\User;
 use App\Services\Billing\OrganizationCodeService;
+use App\Services\Billing\OrganizationSeatService;
 use App\Services\Billing\StripePriceGateway;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Crypt;
@@ -128,6 +131,44 @@ class AdminCommercialWorkflowTest extends TestCase
         $this->get('/plans')->assertOk()->assertSee('Network-safe package')->assertSee('$41');
     }
 
+    public function test_admin_can_save_an_enquiry_only_plan_while_stripe_is_configured(): void
+    {
+        Config::set('cashier.secret', 'sk_test_configured');
+        $admin = $this->admin('pricing-admin@example.local');
+        $package = PricingPackage::create([
+            'slug' => 'admin-price-test',
+            'title' => 'Before',
+            'amount' => 20,
+            'currency' => 'usd',
+            'price_label' => '$20',
+            'type' => 'one_time',
+            'stripe_price_id' => 'price_old',
+            'is_visible' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->actingAs($admin)
+            ->post('/admin/edit-pricing-package/'.$package->id, [
+                'title' => 'Organisation assessment',
+                'amount' => '0',
+                'currency' => 'usd',
+                'button_text' => 'Request a quote',
+                'cta_mode' => 'enquiry',
+                'type' => 'one_time',
+                'sort_order' => 0,
+                'is_visible' => '1',
+            ])
+            ->assertRedirect('/admin/pricing-packages')
+            ->assertSessionHas('success', 'Pricing package updated.');
+
+        $this->assertDatabaseHas('pricing_packages', [
+            'id' => $package->id,
+            'title' => 'Organisation assessment',
+            'cta_mode' => 'enquiry',
+            'stripe_price_id' => null,
+        ]);
+    }
+
     public function test_public_organisation_enquiry_is_stored_and_visible_to_admin(): void
     {
         $email = 'enquiry-workflow@example.local';
@@ -210,6 +251,11 @@ class AdminCommercialWorkflowTest extends TestCase
             'shared_code_enabled' => true,
         ]);
         $admin = $this->admin('organization-email-admin@example.local');
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        OrganizationSeat::where('organization_quote_id', $quote->id)
+            ->orderBy('id')
+            ->limit(3)
+            ->update(['status' => 'claimed', 'claimed_at' => now()]);
 
         $this->actingAs($admin)
             ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/send-email')
@@ -226,6 +272,19 @@ class AdminCommercialWorkflowTest extends TestCase
             ->assertSessionHas('success');
 
         Mail::assertSent(OrganizationAccessCodeMail::class, 2);
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/send-usage-update')
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        Mail::assertSent(OrganizationCodeUsageMail::class, function (OrganizationCodeUsageMail $mail) use ($code, $enquiry): bool {
+            return $mail->hasTo($enquiry->contact_email)
+                && $mail->issuedSeats === 8
+                && $mail->claimedSeats === 3
+                && str_contains($mail->render(), '3 of 8')
+                && ! str_contains($mail->render(), $code);
+        });
     }
 
     public function test_payment_toggle_on_a_new_deal_activates_seats_and_the_enterprise_code_after_save(): void

@@ -72,7 +72,11 @@
                   @if($quote->enquiry?->contact_email)
                     <form method="post" action="{{ url('admin/organization-quotes/'.$quote->id.'/shared-code/send-email') }}">
                       @csrf
-                      <button class="enterprise-action" type="submit">Send email</button>
+                      <button class="enterprise-action" type="submit">Send code</button>
+                    </form>
+                    <form method="post" action="{{ url('admin/organization-quotes/'.$quote->id.'/shared-code/send-usage-update') }}">
+                      @csrf
+                      <button class="enterprise-action" type="submit">Send usage update</button>
                     </form>
                   @endif
                 @elseif($quote->status === 'paid' && ! $hasEnterpriseCode)
