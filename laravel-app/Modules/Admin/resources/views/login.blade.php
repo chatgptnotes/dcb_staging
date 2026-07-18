@@ -1,134 +1,202 @@
-<!DOCTYPE html>
-
-
-
-<html lang="en" class="light-style layout-wide  customizer-hide" dir="ltr" data-theme="theme-default" data-assets-path="../../assets/" data-template="vertical-menu-template">
-
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DecodeMyBrain | Admin sign in</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #171513;
+            --muted: #6f6961;
+            --line: #eadfcf;
+            --canvas: #fffaf2;
+            --card: #ffffff;
+            --yellow: #ffda4d;
+            --yellow-dark: #d4a20e;
+            --danger-bg: #fff0ea;
+            --danger: #a9441b;
+            --success-bg: #e8f8ed;
+            --success: #227a45;
+        }
 
-    <title>DecodeMyBrain | Admin</title>
+        * { box-sizing: border-box; }
 
+        body {
+            min-height: 100vh;
+            margin: 0;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 8% 8%, rgba(255, 218, 77, .30), transparent 24rem),
+                radial-gradient(circle at 96% 95%, rgba(159, 227, 218, .32), transparent 29rem),
+                var(--canvas);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
 
-    <meta name="description" content="Most Powerful &amp; Comprehensive Bootstrap 5 Admin Dashboard built for developers!" />
-    <meta name="keywords" content="dashboard, bootstrap 5 dashboard, bootstrap 5 design, bootstrap 5">
+        .admin-login {
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+            padding: 32px 20px;
+        }
 
+        .login-card {
+            width: min(100%, 460px);
+            padding: 42px;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: 0 24px 60px rgba(51, 38, 16, .12);
+        }
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="{{ asset('backend-assets/img/favicon/favicon.ico') }}" />
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            min-height: 55px;
+            margin-bottom: 34px;
+        }
 
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com/">
-    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&amp;display=swap" rel="stylesheet">
+        .brand img {
+            display: block;
+            width: auto;
+            max-width: 180px;
+            max-height: 58px;
+            object-fit: contain;
+        }
 
-    <!-- Icons -->
-    <link rel="stylesheet" href="{{ asset('backend-assets/vendor/fonts/boxicons.css') }}" />
+        h1 {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(2rem, 6vw, 2.6rem);
+            line-height: 1.05;
+            letter-spacing: -.045em;
+        }
 
-    <!-- Core CSS -->
-    <link rel="stylesheet" href="{{ asset('backend-assets/vendor/css/rtl/core.css') }}" />
-    <link rel="stylesheet" href="{{ asset('backend-assets/vendor/css/rtl/theme-default.css') }}"  />
-    <link rel="stylesheet" href="{{ asset('backend-assets/css/demo.css') }}" />
+        .intro {
+            margin: 14px 0 30px;
+            color: var(--muted);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
 
-    <!-- Vendors CSS -->
-    <link rel="stylesheet" href="{{ asset('backend-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css') }}" />
+        .notice {
+            margin: 0 0 20px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: .93rem;
+            line-height: 1.4;
+        }
 
-    <!-- Page CSS -->
-    <!-- Page -->
-<link rel="stylesheet" href="{{ asset('backend-assets/vendor/css/pages/page-auth.css') }}">
+        .notice--error { color: var(--danger); background: var(--danger-bg); }
+        .notice--success { color: var(--success); background: var(--success-bg); }
 
-    <!-- Helpers -->
-    <script src="{{ asset('backend-assets/vendor/js/helpers.js') }}"></script>
+        .field { margin-bottom: 21px; }
 
-    <script src="{{ asset('backend-assets/js/config.js') }}"></script>
+        label {
+            display: block;
+            color: #37322d;
+            font-size: .94rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
 
+        input {
+            width: 100%;
+            min-height: 51px;
+            padding: 0 14px;
+            color: var(--ink);
+            border: 1px solid #d9cdbd;
+            border-radius: 10px;
+            outline: none;
+            background: #fff;
+            font: inherit;
+            transition: border-color .15s ease, box-shadow .15s ease;
+        }
+
+        input::placeholder { color: #a79f96; }
+        input:focus { border-color: var(--yellow-dark); box-shadow: 0 0 0 4px rgba(255, 218, 77, .28); }
+        input[aria-invalid="true"] { border-color: #d46039; }
+
+        .field-error {
+            display: block;
+            margin-top: 7px;
+            color: var(--danger);
+            font-size: .84rem;
+        }
+
+        .submit {
+            width: 100%;
+            min-height: 53px;
+            margin-top: 6px;
+            border: 1px solid #d9ad20;
+            border-radius: 11px;
+            color: #18130c;
+            background: var(--yellow);
+            box-shadow: 0 5px 0 rgba(190, 140, 0, .14);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 800;
+            transition: transform .15s ease, background .15s ease;
+        }
+
+        .submit:hover { background: #ffd23c; transform: translateY(-1px); }
+        .submit:focus-visible { outline: 3px solid #171513; outline-offset: 3px; }
+
+        .security-note {
+            margin: 24px 0 0;
+            color: var(--muted);
+            font-size: .83rem;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        @media (max-width: 520px) {
+            .admin-login { padding: 18px; }
+            .login-card { padding: 30px 24px; border-radius: 18px; }
+            .brand { margin-bottom: 27px; }
+        }
+    </style>
 </head>
-
 <body>
-
-
-  <!-- Content -->
-
-<div class="container-xxl">
-  <div class="authentication-wrapper authentication-basic container-p-y">
-    <div class="authentication-inner">
-      <!-- Register -->
-      <div class="card">
-        <div class="card-body">
-          <!-- Logo -->
-          <div class="app-brand justify-content-center">
-            <a href="{{url('admin')}}" class="app-brand-link gap-2">
-              <span class="app-brand-logo demo">
-
-                <img src="{{ asset('assets/images/zebra_logo.PNG') }}" class="d-inline-block align-top" alt="Logo">
-
-</span>
-
+    <main class="admin-login">
+        <section class="login-card" aria-labelledby="login-heading">
+            <a class="brand" href="{{ url('admin') }}" aria-label="DecodeMyBrain admin home">
+                <img src="{{ asset('assets/images/zebra_logo.PNG') }}" alt="DecodeMyBrain">
             </a>
-            @if(Session::has('success')) <div class="alert alert-success mt-2 mb-2">{{ Session::get('success') }}</li></div>@endif
-@if(Session::has('fail')) <div class="alert alert-danger mt-2 mb-2">{{ Session::get('fail') }}</li></div>@endif
-          </div>
-          <!-- /Logo -->
-          <h4 class="mb-2">Welcome to the Admin Dashboard</h4>
-          <p class="mb-4">Please sign-in to your account and continue</p>
 
-        <form  class="mb-3" action="" method="post">
-        @csrf
-            <div class="mb-3">
-              <label for="email" class="form-label">Email</label>
-              <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email" autofocus>
-              @if($errors->has("email")) <div class="alert alert-danger mt-2">{{ $errors->first('email') }}</li></div>@endif
-            </div>
-            <div class="mb-3 form-password-toggle">
-              <div class="d-flex justify-content-between">
-                <label class="form-label" for="password">Password</label>
-                <a href="auth-forgot-password-basic.html">
-                  <small>Forgot Password?</small>
-                </a>
-              </div>
-              <div class="input-group input-group-merge">
-                <input type="password" id="password" class="form-control" name="password"  aria-describedby="password" />
-                <span class="input-group-text cursor-pointer"><i class="bx bx-hide"></i></span>
-              </div>
-              @if($errors->has("password")) <div class="alert alert-danger mt-2">{{ $errors->first('password') }}</li></div>@endif
-            </div>
+            <h1 id="login-heading">Welcome back</h1>
+            <p class="intro">Sign in to access the DecodeMyBrain administration dashboard.</p>
 
-            <div class="mb-3">
-              <button class="btn btn-primary d-grid w-100" type="submit">Sign in</button>
-            </div>
-          </form>
+            @if(Session::has('success'))
+                <div class="notice notice--success" role="status">{{ Session::get('success') }}</div>
+            @endif
+            @if(Session::has('fail'))
+                <div class="notice notice--error" role="alert">{{ Session::get('fail') }}</div>
+            @endif
 
+            <form method="post" action="{{ url('admin') }}" novalidate>
+                @csrf
+                <div class="field">
+                    <label for="email">Email address</label>
+                    <input id="email" name="email" type="email" value="{{ old('email') }}" placeholder="you@example.com" autocomplete="email" autofocus required aria-invalid="{{ $errors->has('email') ? 'true' : 'false' }}" aria-describedby="email-error">
+                    @if($errors->has('email'))
+                        <span id="email-error" class="field-error">{{ $errors->first('email') }}</span>
+                    @endif
+                </div>
 
-        </div>
-      </div>
-      <!-- /Register -->
-    </div>
-  </div>
-</div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" aria-describedby="password-error">
+                    @if($errors->has('password'))
+                        <span id="password-error" class="field-error">{{ $errors->first('password') }}</span>
+                    @endif
+                </div>
 
-<!-- / Content -->
+                <button class="submit" type="submit">Sign in</button>
+            </form>
 
-
-
-
-  <!-- Core JS -->
-  <!-- build:js assets/vendor/js/core.js -->
-
-  <script src="{{ asset('backend-assets/vendor/libs/jquery/jquery.js') }}"></script>
-  <script src="{{ asset('backend-assets/vendor/libs/popper/popper.js') }}"></script>
-  <script src="{{ asset('backend-assets/vendor/js/bootstrap.js') }}"></script>
-  <script src="{{ asset('backend-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js') }}"></script>
-  <script src="{{ asset('backend-assets/vendor/js/menu.js') }}"></script>
-
-  <!-- endbuild -->
-
-  <!-- Vendors JS -->
-  <!-- Main JS -->
-  <script src="{{ asset('backend-assets/js/main.js') }}"></script>
-
-
+            <p class="security-note">Restricted access for authorised administrators only.</p>
+        </section>
+    </main>
 </body>
-
 </html>
-
