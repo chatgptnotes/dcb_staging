@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\OrganizationSeat;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Billing\OrganizationSeatService;
@@ -75,7 +76,7 @@ class VoucherController extends Controller
         try {
             $seat = $this->organizationCodes->claim(Crypt::decryptString($encryptedCode), $user);
             session()->forget(['pending_organization_code', 'intended_package', 'new_purchase_flow']);
-            return redirect('/questions/q1')->with('success', 'Your organisation code has been accepted for '.$seat->package_slug.'.');
+            return $this->redirectToAcceptedAccessCode($seat);
         } catch (RuntimeException $e) {
             session()->forget('pending_organization_code');
             return redirect()->route('access.choice')->with('fail', $e->getMessage());
@@ -83,6 +84,30 @@ class VoucherController extends Controller
             session()->forget('pending_organization_code');
             return redirect()->route('access.choice')->with('fail', 'The code is invalid or unavailable.');
         }
+    }
+
+    /** Show the one-time confirmation page after an organisation seat is claimed. */
+    public function acceptedAccessCode()
+    {
+        $seat = $this->confirmedOrganizationSeat();
+        if (! $seat) {
+            session()->forget('organization_code_confirmation_seat_id');
+            return redirect()->route('access.choice')->with('fail', 'Your organisation code confirmation has expired. Please enter the code again.');
+        }
+
+        return view('public.organization_code_accepted', compact('seat'));
+    }
+
+    /** Start the assessment and dismiss the one-time organisation-code confirmation. */
+    public function startAcceptedAccessCode(): RedirectResponse
+    {
+        if (! $this->confirmedOrganizationSeat()) {
+            session()->forget('organization_code_confirmation_seat_id');
+            return redirect()->route('access.choice')->with('fail', 'Your organisation code confirmation has expired. Please enter the code again.');
+        }
+
+        session()->forget('organization_code_confirmation_seat_id');
+        return redirect('/questions/q1');
     }
 
     /** Redeem either an individual voucher or an organisation's shared code. */
@@ -115,10 +140,32 @@ class VoucherController extends Controller
         try {
             $seat = $this->organizationCodes->claim($data['code'], $user);
             session()->forget(['intended_package', 'new_purchase_flow']);
-            return redirect('/questions/q1')->with('success', 'Your organisation code has been accepted for '.$seat->package_slug.'.');
+            return $this->redirectToAcceptedAccessCode($seat);
         } catch (RuntimeException $e) {
             return back()->withInput()->with('fail', $e->getMessage());
         }
+    }
+
+    private function redirectToAcceptedAccessCode(OrganizationSeat $seat): RedirectResponse
+    {
+        session(['organization_code_confirmation_seat_id' => $seat->id]);
+
+        return redirect()->route('access.code.accepted');
+    }
+
+    private function confirmedOrganizationSeat(): ?OrganizationSeat
+    {
+        $seatId = (int) session('organization_code_confirmation_seat_id');
+        $wpUserId = (int) session('user_id');
+        if ($seatId <= 0 || $wpUserId <= 0) {
+            return null;
+        }
+
+        return OrganizationSeat::with('quote.organization')
+            ->whereKey($seatId)
+            ->where('status', 'claimed')
+            ->where('claimed_by_wp_user_id', $wpUserId)
+            ->first();
     }
 
     /** Store a pending code before authentication; do not consume it yet. */

@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Organization;
 use App\Models\OrganizationEnquiry;
 use App\Models\OrganizationQuote;
+use App\Models\OrganizationSeat;
 use App\Models\User;
 use App\Models\WPUsers;
 use App\Services\Billing\OrganizationCodeService;
@@ -234,15 +235,29 @@ class OrganizationCodeServiceTest extends TestCase
         app(OrganizationSeatService::class)->allocatePaidSeats($quote);
         $code = app(OrganizationCodeService::class)->createOrReplace($quote);
 
-        $this->withSession(['user_id' => $wpId, 'intended_package' => 'decodemybrain-deep-dive'])
+        $response = $this->withSession(['user_id' => $wpId, 'intended_package' => 'decodemybrain-deep-dive'])
             ->post(route('access.code'), ['code' => $code])
-            ->assertRedirect('/questions/q1');
+            ->assertRedirect(route('access.code.accepted'))
+            ->assertSessionHas('organization_code_confirmation_seat_id');
 
         $this->assertDatabaseHas('organization_seats', [
             'organization_quote_id' => $quote->id,
             'status' => 'claimed',
             'claimed_by_wp_user_id' => $wpId,
         ]);
+
+        $seat = OrganizationSeat::where('organization_quote_id', $quote->id)->firstOrFail();
+        $this->withSession(['user_id' => $wpId, 'organization_code_confirmation_seat_id' => $seat->id])
+            ->get(route('access.code.accepted'))
+            ->assertOk()
+            ->assertSee('Code accepted')
+            ->assertSee($organization->name)
+            ->assertSee('Start the assessment');
+
+        $this->withSession(['user_id' => $wpId, 'organization_code_confirmation_seat_id' => $seat->id])
+            ->post(route('access.code.accepted.start'))
+            ->assertRedirect('/questions/q1')
+            ->assertSessionMissing('organization_code_confirmation_seat_id');
     }
 
     public function test_guest_can_validate_an_organisation_code_before_registration_then_claim_it_after_sign_in(): void
@@ -278,11 +293,33 @@ class OrganizationCodeServiceTest extends TestCase
 
         $this->withSession(['user_id' => $wpId, 'pending_organization_code' => Crypt::encryptString($code)])
             ->get(route('access.code.complete'))
-            ->assertRedirect('/questions/q1');
+            ->assertRedirect(route('access.code.accepted'))
+            ->assertSessionHas('organization_code_confirmation_seat_id');
 
         $this->assertDatabaseHas('organization_seats', [
             'organization_quote_id' => $quote->id, 'status' => 'claimed', 'claimed_by_wp_user_id' => $wpId,
         ]);
+    }
+
+    public function test_organisation_code_confirmation_cannot_be_opened_by_another_user(): void
+    {
+        $ownerId = max(9_260_000, (int) User::max('wp_user_id') + 101);
+        $otherId = $ownerId + 1;
+        $organization = Organization::create(['name' => 'Protected confirmation '.$ownerId, 'contact_name' => 'Test contact', 'contact_email' => 'contact-'.$ownerId.'@example.local', 'status' => 'active']);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id, 'quote_number' => 'PROTECTED-ORG-'.$ownerId,
+            'package_slug' => 'decodemybrain-deep-dive', 'seat_count' => 1,
+            'unit_amount_minor' => 2900, 'discount_amount_minor' => 0, 'total_amount_minor' => 2900,
+            'billing_type' => 'one_time', 'access_term' => 'permanent', 'status' => 'paid', 'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $seat = OrganizationSeat::where('organization_quote_id', $quote->id)->firstOrFail();
+        $seat->update(['status' => 'claimed', 'claimed_by_wp_user_id' => $ownerId, 'claimed_at' => now()]);
+
+        $this->withSession(['user_id' => $otherId, 'organization_code_confirmation_seat_id' => $seat->id])
+            ->get(route('access.code.accepted'))
+            ->assertRedirect(route('access.choice'))
+            ->assertSessionMissing('organization_code_confirmation_seat_id');
     }
 
     public function test_admin_can_disable_and_reenable_the_same_existing_organisation_code(): void

@@ -86,6 +86,8 @@ Route::get('/start/access', [VoucherController::class, 'accessChoice'])->name('a
 Route::post('/start/access/pay', [VoucherController::class, 'payMyself'])->name('access.pay');
 Route::post('/start/access/code/validate', [VoucherController::class, 'beginCode'])->name('access.code.begin')->middleware('throttle:10,1');
 Route::get('/start/access/code/complete', [VoucherController::class, 'completeAccessCode'])->name('access.code.complete')->middleware('authCustomer');
+Route::get('/start/access/code/accepted', [VoucherController::class, 'acceptedAccessCode'])->name('access.code.accepted')->middleware('authCustomer');
+Route::post('/start/access/code/accepted/start', [VoucherController::class, 'startAcceptedAccessCode'])->name('access.code.accepted.start')->middleware('authCustomer');
 Route::post('/start/access/code', [VoucherController::class, 'redeemCode'])->name('access.code')->middleware(['authCustomer', 'throttle:10,1']);
 Route::get('/organization/invitation/complete', [VoucherController::class, 'completeInvitation'])->name('organization.invitation.complete')->middleware('authCustomer');
 Route::get('/organization/invitation/{token}', [VoucherController::class, 'invitation'])->name('organization.invitation');
