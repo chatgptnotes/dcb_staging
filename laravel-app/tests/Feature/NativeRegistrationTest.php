@@ -120,7 +120,7 @@ class NativeRegistrationTest extends TestCase
         $this->flushSession();
 
         $response = $this->post('/sign-up', $this->validPayload(['user_name' => 'different_name']));
-        $response->assertSessionHas('fail');
+        $response->assertSessionHasErrors('email');
         $this->assertSame(1, User::where('email', self::EMAIL)->count());
     }
 
@@ -130,10 +130,37 @@ class NativeRegistrationTest extends TestCase
         $this->flushSession();
 
         $response = $this->post('/sign-up', $this->validPayload(['email' => 'other-'.self::EMAIL]));
-        $response->assertSessionHas('fail');
+        $response->assertSessionHasErrors('user_name');
 
         // cleanup the alternate email if it somehow got through
         User::where('email', 'other-'.self::EMAIL)->delete();
+    }
+
+    public function test_duplicate_username_reopens_the_public_purchase_registration_modal(): void
+    {
+        $this->post('/sign-up', $this->validPayload());
+        $this->flushSession();
+
+        $payload = $this->validPayload([
+            'email' => 'other-'.self::EMAIL,
+            'intended_package' => 'decodemybrain-deep-dive',
+            'purchase_flow' => '1',
+            'registration_form' => '1',
+        ]);
+
+        $response = $this->from(route('public.plans'))->post('/sign-up', $payload);
+
+        $response->assertRedirect(route('public.plans'));
+        $response->assertSessionHasErrors('user_name');
+
+        $this->get(route('public.plans'))
+            ->assertOk()
+            ->assertSee('modal open', false)
+            ->assertSee('That username is already taken.')
+            ->assertSee('value="Native"', false)
+            ->assertSee('value="native_signup_test"', false)
+            ->assertSee('value="other-native-signup-test@example.local"', false)
+            ->assertDontSee('<main class="page"><div class="alert">That username is already taken.', false);
     }
 
     public function test_underage_is_rejected(): void

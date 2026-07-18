@@ -399,6 +399,8 @@ class AdminController extends Controller
             'button_text'      => 'required',
             'cta_mode'         => 'nullable|in:purchase,enquiry',
             'price_suffix'     => 'nullable|string|max:50',
+            'minimum_age'      => 'nullable|integer|min:0|max:120|required_with:maximum_age',
+            'maximum_age'      => 'nullable|integer|min:0|max:120',
             'price_label'      => 'nullable|string|max:50',
             'type'             => 'required|in:subscription,one_time',
             'billing_interval' => 'required_if:type,subscription|in:month,year',
@@ -409,6 +411,11 @@ class AdminController extends Controller
         $newCurrency = strtolower(trim($request->currency));
         $newType     = $request->type;
         $newInterval = $newType === 'subscription' ? $request->billing_interval : null;
+        $minimumAge = $request->filled('minimum_age') ? (int) $request->minimum_age : null;
+        $maximumAge = $request->filled('maximum_age') ? (int) $request->maximum_age : null;
+        if ($minimumAge !== null && $maximumAge !== null && $maximumAge < $minimumAge) {
+            return back()->withInput()->withErrors(['maximum_age' => 'Maximum age must be greater than or equal to minimum age.']);
+        }
         $billingChanged = (float) $package->amount !== $newAmount
             || strtolower((string) $package->currency) !== $newCurrency
             || (string) $package->type !== $newType
@@ -449,6 +456,11 @@ class AdminController extends Controller
 
         $package->title             = $request->title;
         $package->subtitle          = $request->subtitle;
+        $package->minimum_age       = $minimumAge;
+        $package->maximum_age       = $maximumAge;
+        $package->age_range         = $minimumAge === null
+            ? null
+            : ($maximumAge === null ? 'Ages '.$minimumAge.'+' : 'Ages '.$minimumAge.'–'.$maximumAge);
         $package->old_price_label   = $request->old_price_label;
         $package->amount            = $newAmount;
         $package->currency          = $newCurrency;

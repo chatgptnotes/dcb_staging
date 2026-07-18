@@ -11,6 +11,6 @@
   @stack('styles')
 </head>
 <body><div class="shell">@if(trim($__env->yieldContent('show_public_nav')) === 'yes')@include('public.partials.nav')@endif @yield('body')</div><script>
-document.querySelectorAll('input[name="dob"][type="date"]').forEach(function (input) { input.type='text';input.placeholder='DD/MM/YYYY';input.inputMode='numeric';input.autocomplete='bday';input.pattern='[0-9]{2}/[0-9]{2}/[0-9]{4}';input.title='Enter the date as DD/MM/YYYY';input.addEventListener('input',function(){var digits=input.value.replace(/\D/g,'').slice(0,8);input.value=digits.replace(/^(\d{2})(\d)/,'$1/$2').replace(/^(\d{2}\/\d{2})(\d)/,'$1/$2')})});
+document.querySelectorAll('input[name="dob"]').forEach(function (input) { if(input.type==='date'){input.type='text'}input.placeholder='DD/MM/YYYY';input.inputMode='numeric';input.autocomplete='bday';input.pattern='[0-9]{2}/[0-9]{2}/[0-9]{4}';input.title='Enter the date as DD/MM/YYYY';input.addEventListener('input',function(){var digits=input.value.replace(/\D/g,'').slice(0,8);input.value=digits.replace(/^(\d{2})(\d)/,'$1/$2').replace(/^(\d{2}\/\d{2})(\d)/,'$1/$2')})});
 </script>@stack('scripts')</body>
 </html>

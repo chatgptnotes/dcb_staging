@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\Billing\EntitlementService;
+use App\Services\Billing\CheckoutPaymentRecorder;
 use App\Services\Billing\PackageCatalog;
 use App\Services\Billing\VoucherService;
 use Laravel\Cashier\Http\Controllers\WebhookController as CashierWebhookController;
@@ -28,12 +29,15 @@ class StripeWebhookController extends CashierWebhookController
 
     private VoucherService $vouchers;
 
-    public function __construct(EntitlementService $entitlements, PackageCatalog $catalog, VoucherService $vouchers)
+    private CheckoutPaymentRecorder $payments;
+
+    public function __construct(EntitlementService $entitlements, PackageCatalog $catalog, VoucherService $vouchers, CheckoutPaymentRecorder $payments)
     {
         parent::__construct();
         $this->entitlements = $entitlements;
         $this->catalog = $catalog;
         $this->vouchers = $vouchers;
+        $this->payments = $payments;
     }
 
     /**
@@ -48,6 +52,7 @@ class StripeWebhookController extends CashierWebhookController
         $paymentStatus = $object['payment_status'] ?? null;
         if ($paymentStatus === 'paid' || $paymentStatus === 'no_payment_required') {
             $this->grantFrom($object);
+            $this->payments->recordSuccessfulCheckout($object);
             $this->vouchers->recordCheckoutRedemption($object);
         }
 
@@ -59,7 +64,9 @@ class StripeWebhookController extends CashierWebhookController
      */
     public function handleCheckoutSessionAsyncPaymentSucceeded(array $payload): Response
     {
-        $this->grantFrom($payload['data']['object'] ?? []);
+        $session = $payload['data']['object'] ?? [];
+        $this->grantFrom($session);
+        $this->payments->recordSuccessfulCheckout($session);
 
         return $this->successMethod();
     }

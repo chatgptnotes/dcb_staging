@@ -10,6 +10,7 @@ use App\Models\OrganizationQuote;
 use App\Mail\OrganizationAccessCodeMail;
 use App\Models\PricingPackage;
 use App\Models\User;
+use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\StripePriceGateway;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Crypt;
@@ -53,9 +54,11 @@ class AdminCommercialWorkflowTest extends TestCase
             ->post('/admin/edit-pricing-package/'.$package->id, [
                 'title' => 'Updated package',
                 'amount' => '37.50',
-                'currency' => 'usd',
-                'button_text' => 'Choose now',
-                'type' => 'one_time',
+            'currency' => 'usd',
+            'button_text' => 'Choose now',
+            'minimum_age' => 13,
+            'maximum_age' => 15,
+            'type' => 'one_time',
                 'sort_order' => 0,
                 'is_visible' => '1',
             ])
@@ -67,9 +70,17 @@ class AdminCommercialWorkflowTest extends TestCase
             'title' => 'Updated package',
             'amount' => '37.50',
             'price_label' => '$37.50',
+            'minimum_age' => 13,
+            'maximum_age' => 15,
         ]);
 
-        $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50');
+        $this->actingAs($admin)
+            ->get('/admin/pricing-packages')
+            ->assertOk()
+            ->assertSee('Updated package')
+            ->assertSee('Ages 13–15');
+
+        $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50')->assertSee('Ages 13–15');
     }
 
     public function test_admin_price_change_reaches_customers_when_stripe_is_temporarily_unavailable(): void
@@ -235,20 +246,72 @@ class AdminCommercialWorkflowTest extends TestCase
             'contact_email' => $enquiry->contact_email,
             'package_slug' => 'decodemybrain-deep-dive',
             'seat_count' => 3,
-            'unit_amount' => '29.00',
-            'discount_amount' => '0.00',
-            'billing_type' => 'one_time',
-            'access_term' => 'permanent',
+            'agreed_amount' => '29.00',
             'payment_received' => '1',
-        ])->assertRedirect()->assertSessionHas('organization_code');
+        ])->assertRedirect('/admin/enterprise-codes')->assertSessionHas('organization_code');
 
         $quote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->firstOrFail();
         $this->assertSame('paid', $quote->status);
+        $this->assertSame(2900, $quote->total_amount_minor);
+        $this->assertSame(0, $quote->discount_amount_minor);
+        $this->assertSame('one_time', $quote->billing_type);
+        $this->assertSame('permanent', $quote->access_term);
+        $this->assertNull($quote->access_ends_at);
+        $this->assertNull($quote->expires_at);
         $this->assertTrue($quote->shared_code_enabled);
         $this->assertSame(3, $quote->seats()->count());
 
         $this->actingAs($admin)->get('/admin/enterprise-codes')
             ->assertOk()->assertSee('Toggle School')->assertSee('Export usage');
+    }
+
+    public function test_admin_can_rotate_an_enterprise_code_without_changing_seat_usage(): void
+    {
+        $organization = Organization::create([
+            'name' => 'Rotation School',
+            'contact_name' => 'Rotation Contact',
+            'contact_email' => 'rotation-school@example.local',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TEST-CODE-ROTATION',
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 2,
+            'unit_amount_minor' => 2900,
+            'total_amount_minor' => 5800,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        $quote->seats()->createMany([
+            ['package_slug' => $quote->package_slug, 'access_term' => 'permanent', 'status' => 'claimed'],
+            ['package_slug' => $quote->package_slug, 'access_term' => 'permanent', 'status' => 'available'],
+        ]);
+
+        $codes = app(OrganizationCodeService::class);
+        $oldCode = $codes->createOrReplace($quote);
+        $oldHash = $quote->fresh()->shared_code_hash;
+
+        $this->actingAs($this->admin('code-rotation-admin@example.local'))
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/rotate')
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'previous code is no longer valid'))
+            ->assertSessionHas('organization_code', fn (string $code): bool => $code !== $oldCode);
+
+        $quote->refresh();
+        $newCode = Crypt::decryptString($quote->shared_code_encrypted);
+        $this->assertNotSame($oldHash, $quote->shared_code_hash);
+        $this->assertNotSame($oldCode, $newCode);
+        $this->assertSame(1, $quote->seats()->where('status', 'claimed')->count());
+        $this->assertSame(1, $quote->seats()->where('status', 'available')->count());
+
+        try {
+            $codes->validateAvailability($oldCode);
+            $this->fail('The old enterprise code should be invalid after rotation.');
+        } catch (RuntimeException) {
+            // Expected: the code hash was replaced.
+        }
+
+        $this->assertSame($quote->id, $codes->validateAvailability($newCode)->id);
     }
 
     public function test_agreements_list_shows_claimed_seat_usage_and_the_requested_sidebar_order(): void
@@ -311,6 +374,7 @@ class AdminCommercialWorkflowTest extends TestCase
             'seat-usage-admin@example.local',
             'organization-email-admin@example.local',
             'toggle-payment-admin@example.local',
+            'code-rotation-admin@example.local',
         ])->delete();
     }
 }

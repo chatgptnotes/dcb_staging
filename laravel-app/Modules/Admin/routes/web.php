@@ -56,8 +56,10 @@ Route::prefix('admin')->group(function() {
     Route::get('/organization-quotes/{id}', [VoucherAdminController::class, 'showQuote'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/mark-paid', [VoucherAdminController::class, 'markQuotePaid'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code', [VoucherAdminController::class, 'createSharedCode'])->middleware('authAdmin');
+    Route::post('/organization-quotes/{id}/shared-code/rotate', [VoucherAdminController::class, 'rotateSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/send-email', [VoucherAdminController::class, 'sendSharedCodeEmail'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/reveal', [VoucherAdminController::class, 'revealSharedCode'])->middleware('authAdmin');
+    Route::post('/organization-quotes/{id}/shared-code/status', [VoucherAdminController::class, 'setSharedCodeEnabled'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/disable', [VoucherAdminController::class, 'disableSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/invite-seats', [VoucherAdminController::class, 'inviteSeats'])->middleware('authAdmin');
     Route::post('/organization-quotes/{quoteId}/seats/{seatId}/resend', [VoucherAdminController::class, 'resendSeat'])->middleware('authAdmin');

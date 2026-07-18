@@ -6,10 +6,13 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\StripeWebhookController;
 use App\Models\PricingPackage;
+use App\Models\PaymentRecord;
 use App\Models\User;
 use App\Models\WPUsers;
+use App\Services\Admin\AdminInsightsService;
 use App\Services\Billing\EntitlementService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 /**
@@ -90,6 +93,7 @@ class StripeWebhookEntitlementTest extends TestCase
     {
         WPUsers::whereIn('user_id', [self::WP_ID, self::WP_ID_NO_MIRROR])->delete();
         User::whereIn('wp_user_id', [self::WP_ID, self::WP_ID_NO_MIRROR])->delete();
+        PaymentRecord::where('checkout_session_id', 'like', 'cs_webhook_test_%')->delete();
     }
 
     private function controller(): StripeWebhookController
@@ -106,6 +110,63 @@ class StripeWebhookEntitlementTest extends TestCase
 
         $this->assertSame('decodemybrain-deep-dive', WPUsers::where('user_id', self::WP_ID)->value('package'));
         $this->assertSame('decodemybrain-deep-dive', User::where('wp_user_id', self::WP_ID)->value('package'));
+    }
+
+    public function test_paid_checkout_is_recorded_once_with_customer_and_package(): void
+    {
+        $session = [
+            'id' => 'cs_webhook_test_001',
+            'created' => now()->timestamp,
+            'payment_status' => 'paid',
+            'payment_intent' => 'pi_webhook_test_001',
+            'customer' => 'cus_webhook_test_001',
+            'amount_subtotal' => 4900,
+            'amount_total' => 3900,
+            'currency' => 'usd',
+            'customer_details' => ['name' => 'Registered Customer', 'email' => 'wh-test@example.local'],
+            'metadata' => ['wp_user_id' => (string) self::WP_ID, 'package' => 'decodemybrain-deep-dive'],
+        ];
+
+        $this->controller()->handleCheckoutSessionCompleted(['data' => ['object' => $session]]);
+        $this->controller()->handleCheckoutSessionCompleted(['data' => ['object' => $session]]);
+
+        $this->assertDatabaseHas('payment_records', [
+            'checkout_session_id' => 'cs_webhook_test_001',
+            'stripe_payment_intent_id' => 'pi_webhook_test_001',
+            'stripe_customer_id' => 'cus_webhook_test_001',
+            'wp_user_id' => self::WP_ID,
+            'customer_name' => 'Registered Customer',
+            'customer_email' => 'wh-test@example.local',
+            'package_slug' => 'decodemybrain-deep-dive',
+            'amount_total_minor' => 3900,
+            'status' => 'paid',
+        ]);
+        $this->assertSame(1, PaymentRecord::where('checkout_session_id', 'cs_webhook_test_001')->count());
+    }
+
+    public function test_admin_payments_prefer_the_registered_customer_for_recorded_checkout(): void
+    {
+        Config::set('cashier.secret', '');
+        PaymentRecord::create([
+            'wp_user_id' => self::WP_ID,
+            'checkout_session_id' => 'cs_webhook_test_admin',
+            'stripe_payment_intent_id' => 'pi_webhook_test_admin',
+            'customer_name' => 'Stripe Billing Name',
+            'customer_email' => 'stripe-billing@example.local',
+            'package_slug' => 'decodemybrain-guided-friend-and-family-connect',
+            'amount_total_minor' => 49900,
+            'currency' => 'usd',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        $payment = app(AdminInsightsService::class)->payments(now()->subDay(), now()->addDay())
+            ->firstWhere('transaction_id', 'pi_webhook_test_admin');
+
+        $this->assertNotNull($payment);
+        $this->assertSame('WH Test', $payment->display_name);
+        $this->assertSame('wh-test@example.local', $payment->email);
+        $this->assertSame('decodemybrain-guided-friend-and-family-connect', $payment->package);
     }
 
     public function test_unpaid_checkout_session_does_not_grant(): void

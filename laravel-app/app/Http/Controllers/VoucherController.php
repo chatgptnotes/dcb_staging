@@ -76,6 +76,9 @@ class VoucherController extends Controller
             $seat = $this->organizationCodes->claim(Crypt::decryptString($encryptedCode), $user);
             session()->forget(['pending_organization_code', 'intended_package', 'new_purchase_flow']);
             return redirect('/questions/q1')->with('success', 'Your organisation code has been accepted for '.$seat->package_slug.'.');
+        } catch (RuntimeException $e) {
+            session()->forget('pending_organization_code');
+            return redirect()->route('access.choice')->with('fail', $e->getMessage());
         } catch (\Throwable $e) {
             session()->forget('pending_organization_code');
             return redirect()->route('access.choice')->with('fail', 'The code is invalid or unavailable.');
@@ -114,7 +117,7 @@ class VoucherController extends Controller
             session()->forget(['intended_package', 'new_purchase_flow']);
             return redirect('/questions/q1')->with('success', 'Your organisation code has been accepted for '.$seat->package_slug.'.');
         } catch (RuntimeException $e) {
-            return back()->withInput()->with('fail', 'The code is invalid or unavailable.');
+            return back()->withInput()->with('fail', $e->getMessage());
         }
     }
 

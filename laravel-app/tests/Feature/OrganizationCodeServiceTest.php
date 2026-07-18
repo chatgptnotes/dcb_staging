@@ -67,6 +67,7 @@ class OrganizationCodeServiceTest extends TestCase
         $user->username = 'org_code_'.$wpId;
         $user->email = 'org-code-'.$wpId.'@example.local';
         $user->display_name = 'Organisation Code Test';
+        $user->date_of_birth = now()->subYears(13)->subDay()->toDateString();
         $user->password = bcrypt('safe-test-password');
         $user->user_role = '2';
         $user->status = 'active';
@@ -95,6 +96,109 @@ class OrganizationCodeServiceTest extends TestCase
         app(OrganizationCodeService::class)->claim($code, $user);
     }
 
+    public function test_organisation_code_rejects_an_out_of_range_age_without_consuming_a_seat(): void
+    {
+        $wpId = max(9_150_000, (int) User::max('wp_user_id') + 101);
+        $user = User::create([
+            'wp_user_id' => $wpId,
+            'username' => 'org_code_age_'.$wpId,
+            'email' => 'org-code-'.$wpId.'@example.local',
+            'display_name' => 'Organisation Age Test',
+            'date_of_birth' => now()->subYears(16)->subDay()->toDateString(),
+            'password' => bcrypt('safe-test-password'),
+            'user_role' => '2',
+            'status' => 'active',
+        ]);
+        $organization = Organization::create([
+            'name' => 'Age organisation '.$wpId,
+            'contact_name' => 'Test contact',
+            'contact_email' => 'contact-'.$wpId.'@example.local',
+            'status' => 'active',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'AGE-ORG-'.$wpId,
+            'package_slug' => 'decodemybrain-deep-dive',
+            'minimum_age' => 12,
+            'maximum_age' => 15,
+            'seat_count' => 1,
+            'unit_amount_minor' => 2900,
+            'discount_amount_minor' => 0,
+            'total_amount_minor' => 2900,
+            'billing_type' => 'one_time',
+            'access_term' => 'permanent',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $codes = app(OrganizationCodeService::class);
+        $code = $codes->createOrReplace($quote);
+
+        $this->assertSame($quote->id, $codes->validateAgeForCode($code, 15)->id);
+        try {
+            $codes->claim($code, $user);
+            $this->fail('An out-of-range user must not be able to claim the organisation code.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('This organisation code is available only to ages 12–15.', $e->getMessage());
+        }
+
+        $this->assertDatabaseHas('organization_seats', [
+            'organization_quote_id' => $quote->id,
+            'status' => 'available',
+        ]);
+    }
+
+    public function test_out_of_range_dob_is_rejected_before_native_signup_creates_an_account(): void
+    {
+        config()->set('app.auth_driver', 'native');
+        config()->set('app.otp_enabled', false);
+        config()->set('packages.funnel', 'free_first');
+
+        $suffix = (string) max(9_175_000, (int) User::max('wp_user_id') + 101);
+        $organization = Organization::create([
+            'name' => 'Signup age organisation '.$suffix,
+            'contact_name' => 'Test contact',
+            'contact_email' => 'contact-'.$suffix.'@example.local',
+            'status' => 'active',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'SIGNUP-AGE-'.$suffix,
+            'package_slug' => 'decodemybrain-deep-dive',
+            'minimum_age' => 12,
+            'maximum_age' => 15,
+            'seat_count' => 1,
+            'unit_amount_minor' => 2900,
+            'discount_amount_minor' => 0,
+            'total_amount_minor' => 2900,
+            'billing_type' => 'one_time',
+            'access_term' => 'permanent',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $code = app(OrganizationCodeService::class)->createOrReplace($quote);
+        $email = 'org-code-signup-'.$suffix.'@example.local';
+
+        $this->withSession(['pending_organization_code' => Crypt::encryptString($code)])
+            ->post('/sign-up', [
+                'first_name' => 'Age',
+                'last_name' => 'Mismatch',
+                'user_name' => 'org_code_signup_'.$suffix,
+                'dob' => now()->subYears(16)->subDay()->format('d/m/Y'),
+                'email' => $email,
+                'password' => 'safe-test-password',
+                'password_confirmation' => 'safe-test-password',
+            ])
+            ->assertSessionHasErrors(['dob' => 'This organisation code is available only to ages 12–15.']);
+
+        $this->assertDatabaseMissing('users', ['email' => $email]);
+        $this->assertDatabaseHas('organization_seats', [
+            'organization_quote_id' => $quote->id,
+            'status' => 'available',
+        ]);
+    }
+
     public function test_member_code_is_accepted_through_the_actual_user_access_form(): void
     {
         $wpId = max(9_200_000, (int) User::max('wp_user_id') + 101);
@@ -103,6 +207,7 @@ class OrganizationCodeServiceTest extends TestCase
         $user->username = 'org_form_'.$wpId;
         $user->email = 'org-form-'.$wpId.'@example.local';
         $user->display_name = 'Organisation Form Test';
+        $user->date_of_birth = now()->subYears(13)->subDay()->toDateString();
         $user->password = bcrypt('safe-test-password');
         $user->user_role = '2';
         $user->status = 'active';
@@ -141,6 +246,7 @@ class OrganizationCodeServiceTest extends TestCase
         $user = User::create([
             'username' => 'org_code_guest_'.$wpId,
             'email' => 'org-code-'.$wpId.'@example.local', 'display_name' => 'Guest code test',
+            'date_of_birth' => now()->subYears(13)->subDay()->toDateString(),
             'password' => bcrypt('safe-test-password'), 'user_role' => '2', 'status' => 'active',
         ]);
         $user->wp_user_id = $wpId;
@@ -174,6 +280,66 @@ class OrganizationCodeServiceTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_disable_and_reenable_the_same_existing_organisation_code(): void
+    {
+        $suffix = (string) max(9_275_000, (int) User::max('wp_user_id') + 101);
+        $organization = Organization::create([
+            'name' => 'Toggle organisation '.$suffix,
+            'contact_name' => 'Toggle contact',
+            'contact_email' => 'contact-'.$suffix.'@example.local',
+            'status' => 'active',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TOGGLE-ORG-'.$suffix,
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 1,
+            'unit_amount_minor' => 2900,
+            'discount_amount_minor' => 0,
+            'total_amount_minor' => 2900,
+            'billing_type' => 'one_time',
+            'access_term' => 'permanent',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(OrganizationSeatService::class)->allocatePaidSeats($quote);
+        $codes = app(OrganizationCodeService::class);
+        $code = $codes->createOrReplace($quote);
+        $encryptedCode = $quote->fresh()->shared_code_encrypted;
+
+        $admin = new User();
+        $admin->email = 'org-admin-'.$suffix.'@example.local';
+        $admin->password = bcrypt('safe-test-password');
+        $admin->user_role = '1';
+        $admin->status = 'active';
+        $admin->save();
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/status', ['enabled' => '0'])
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'disabled'));
+
+        $quote->refresh();
+        $this->assertFalse($quote->shared_code_enabled);
+        $this->assertSame($encryptedCode, $quote->shared_code_encrypted);
+        try {
+            $codes->validateAvailability($code);
+            $this->fail('A disabled enterprise code must not be valid.');
+        } catch (\RuntimeException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/status', ['enabled' => '1'])
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'enabled'));
+
+        $quote->refresh();
+        $this->assertTrue($quote->shared_code_enabled);
+        $this->assertSame($encryptedCode, $quote->shared_code_encrypted);
+        $this->assertSame($quote->id, $codes->validateAvailability($code)->id);
+    }
+
     public function test_admin_creates_an_unpaid_agreement_from_an_enquiry_then_payment_activates_the_shared_code(): void
     {
         $suffix = (string) max(9_300_000, (int) User::max('wp_user_id') + 101);
@@ -202,10 +368,7 @@ class OrganizationCodeServiceTest extends TestCase
                 'contact_phone' => '+1 555 0100',
                 'package_slug' => 'decodemybrain-deep-dive',
                 'seat_count' => 2,
-                'unit_amount' => '29.00',
-                'discount_amount' => '0.00',
-                'billing_type' => 'one_time',
-                'access_term' => 'permanent',
+                'agreed_amount' => '29.00',
             ])
             ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'Record payment'));
 

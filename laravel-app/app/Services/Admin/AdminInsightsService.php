@@ -7,6 +7,7 @@ namespace App\Services\Admin;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminInsightsService
 {
@@ -84,7 +85,22 @@ class AdminInsightsService
 
     public function payments(?Carbon $start, Carbon $end): Collection
     {
-        $local = DB::table('voucher_redemptions')
+        $stored = Schema::hasTable('payment_records')
+            ? DB::table('payment_records')
+                ->leftJoin('wp_users', 'wp_users.user_id', '=', 'payment_records.wp_user_id')
+                ->leftJoin('users', 'users.wp_user_id', '=', 'payment_records.wp_user_id')
+                ->when($start, fn ($query) => $query->whereBetween('payment_records.paid_at', [$start, $end]))
+                ->orderByDesc('payment_records.paid_at')
+                ->get([
+                    'payment_records.*',
+                    DB::raw('COALESCE(NULLIF(wp_users.display_name, ""), users.display_name) as local_display_name'),
+                    DB::raw('COALESCE(NULLIF(wp_users.email, ""), users.email) as local_email'),
+                ])
+            : collect();
+        $storedByIntent = $stored->filter(fn ($row) => ! empty($row->stripe_payment_intent_id))
+            ->keyBy('stripe_payment_intent_id');
+
+        $voucherRows = DB::table('voucher_redemptions')
             ->leftJoin('vouchers', 'vouchers.id', '=', 'voucher_redemptions.voucher_id')
             ->leftJoin('wp_users', 'wp_users.user_id', '=', 'voucher_redemptions.wp_user_id')
             ->leftJoin('users', 'users.wp_user_id', '=', 'voucher_redemptions.wp_user_id')
@@ -100,32 +116,56 @@ class AdminInsightsService
                 DB::raw('COALESCE(NULLIF(wp_users.display_name, ""), users.display_name) as display_name'),
                 DB::raw('COALESCE(NULLIF(wp_users.email, ""), users.email) as email'),
             ]);
-        $localByIntent = $local->filter(fn ($row) => ! empty($row->stripe_payment_intent_id))->keyBy('stripe_payment_intent_id');
+        $vouchersByIntent = $voucherRows->filter(fn ($row) => ! empty($row->stripe_payment_intent_id))
+            ->keyBy('stripe_payment_intent_id');
         $rows = collect();
+        $usedStoredIds = [];
+        $knownVoucherIntents = [];
 
         $secret = (string) config('cashier.secret');
         if ($secret !== '') {
             try {
-                $params = ['limit' => 100, 'expand' => ['data.latest_charge']];
+                $params = ['limit' => 100, 'expand' => ['data.latest_charge', 'data.customer']];
                 if ($start) {
                     $params['created'] = ['gte' => $start->timestamp, 'lte' => $end->timestamp];
                 }
                 $intents = (new \Stripe\StripeClient($secret))->paymentIntents->all($params);
                 foreach ($intents->data as $intent) {
-                    $localRow = $localByIntent->get($intent->id);
+                    $storedRow = $storedByIntent->get($intent->id);
+                    $voucherRow = $vouchersByIntent->get($intent->id);
                     $metadata = (array) ($intent->metadata ?? []);
                     $wpUserId = (int) ($metadata['wp_user_id'] ?? 0);
                     $user = $wpUserId > 0 ? $this->customer($wpUserId) : null;
                     $charge = is_object($intent->latest_charge) ? $intent->latest_charge : null;
+                    $stripeCustomer = $this->stripeCustomer($intent, $charge);
                     $status = $charge && ((int) ($charge->amount_refunded ?? 0) > 0 || ! empty($charge->refunded))
                         ? 'Refunded'
                         : ($intent->status === 'succeeded' ? 'Paid' : 'Failed');
+                    if ($storedRow) {
+                        $usedStoredIds[(int) $storedRow->id] = true;
+                    }
+                    if ($voucherRow) {
+                        $knownVoucherIntents[] = $intent->id;
+                    }
                     $rows->push((object) [
                         'transaction_id' => $intent->id,
-                        'display_name' => $localRow->display_name ?? $user->display_name ?? 'Customer',
-                        'email' => $localRow->email ?? $user->email ?? null,
-                        'package' => $localRow->package_slug ?? ($metadata['package'] ?? '—'),
-                        'coupon' => $localRow->code_hint ?? '—',
+                        'display_name' => $this->firstPresent(
+                            $storedRow?->local_display_name,
+                            $storedRow?->customer_name,
+                            $voucherRow?->display_name,
+                            $user?->display_name,
+                            $stripeCustomer['name'],
+                            'Customer'
+                        ),
+                        'email' => $this->firstPresent(
+                            $storedRow?->local_email,
+                            $storedRow?->customer_email,
+                            $voucherRow?->email,
+                            $user?->email,
+                            $stripeCustomer['email']
+                        ),
+                        'package' => $storedRow?->package_slug ?? $voucherRow?->package_slug ?? ($metadata['package'] ?? '—'),
+                        'coupon' => $storedRow?->coupon_code ?? $voucherRow?->code_hint ?? '—',
                         'amount_minor' => $status === 'Refunded' && $charge ? (int) ($charge->amount_refunded ?? $intent->amount_received) : (int) ($intent->amount_received ?: $intent->amount),
                         'currency' => (string) $intent->currency,
                         'status' => $status,
@@ -137,9 +177,26 @@ class AdminInsightsService
             }
         }
 
-        $known = $rows->pluck('transaction_id')->filter()->all();
-        foreach ($local as $row) {
-            if ($row->stripe_payment_intent_id && in_array($row->stripe_payment_intent_id, $known, true)) {
+        foreach ($stored as $row) {
+            if (isset($usedStoredIds[(int) $row->id])) {
+                continue;
+            }
+            $rows->push((object) [
+                'transaction_id' => $row->stripe_payment_intent_id ?: ($row->stripe_subscription_id ?: $row->checkout_session_id),
+                'display_name' => $this->firstPresent($row->local_display_name, $row->customer_name, 'Customer'),
+                'email' => $this->firstPresent($row->local_email, $row->customer_email),
+                'package' => $row->package_slug ?: '—',
+                'coupon' => $row->coupon_code ?: '—',
+                'amount_minor' => (int) ($row->amount_total_minor ?? $row->amount_subtotal_minor ?? 0),
+                'currency' => $row->currency ?: 'usd',
+                'status' => $row->status === 'refunded' ? 'Refunded' : ($row->status === 'paid' ? 'Paid' : 'Failed'),
+                'created_at' => Carbon::parse($row->paid_at ?? $row->created_at),
+            ]);
+        }
+
+        foreach ($voucherRows as $row) {
+            if (($row->stripe_payment_intent_id && in_array($row->stripe_payment_intent_id, $knownVoucherIntents, true))
+                || ($row->stripe_payment_intent_id && $storedByIntent->has($row->stripe_payment_intent_id))) {
                 continue;
             }
             $rows->push((object) [
@@ -162,5 +219,34 @@ class AdminInsightsService
     {
         return DB::table('users')->where('wp_user_id', $wpUserId)->first(['display_name', 'email'])
             ?: DB::table('wp_users')->where('user_id', $wpUserId)->first(['display_name', 'email']);
+    }
+
+    /** @return array{name: ?string, email: ?string} */
+    private function stripeCustomer(object $intent, ?object $charge): array
+    {
+        $customer = $intent->customer ?? null;
+        $billing = $charge->billing_details ?? null;
+
+        return [
+            'name' => $this->objectValue($customer, 'name') ?: $this->objectValue($billing, 'name'),
+            'email' => $this->objectValue($customer, 'email') ?: $this->objectValue($billing, 'email'),
+        ];
+    }
+
+    private function objectValue(mixed $object, string $key): ?string
+    {
+        $value = is_array($object) ? ($object[$key] ?? null) : (is_object($object) ? ($object->{$key} ?? null) : null);
+        return is_string($value) && trim($value) !== '' ? trim($value) : null;
+    }
+
+    private function firstPresent(?string ...$values): ?string
+    {
+        foreach ($values as $value) {
+            if ($value !== null && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
     }
 }
