@@ -25,6 +25,8 @@ class PricingPackage extends Model
         'title',
         'subtitle',
         'age_range',
+        'minimum_age',
+        'maximum_age',
         'price_label',
         'old_price_label',
         'amount',
@@ -62,6 +64,22 @@ class PricingPackage extends Model
         $decimals = fmod($amount, 1.0) === 0.0 ? 0 : 2;
 
         return $this->currencySymbol() . number_format($amount, $decimals);
+    }
+
+    /**
+     * Human-readable eligibility label shown on both the customer and admin
+     * plan cards. Deriving it from the saved limits keeps both screens in
+     * sync immediately after an admin changes a plan.
+     */
+    public function ageRangeLabel(): ?string
+    {
+        if ($this->minimum_age === null) {
+            return $this->age_range ?: null;
+        }
+
+        return $this->maximum_age === null
+            ? 'Ages ' . $this->minimum_age . '+'
+            : 'Ages ' . $this->minimum_age . '–' . $this->maximum_age;
     }
 
     /**

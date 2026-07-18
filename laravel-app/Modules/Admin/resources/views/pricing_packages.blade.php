@@ -10,6 +10,7 @@
       <article class="product {{ $index === 1 ? 'featured' : '' }}">
         @if($index === 1)<span class="product-badge">Most chosen</span>@endif
         <h2>{{ $package->title }}</h2>
+        @if($package->ageRangeLabel())<p class="product-age">{{ $package->ageRangeLabel() }}</p>@endif
         <div class="product-price">{{ $package->price_label }} <small>{{ $package->price_suffix ?: 'once' }}</small></div>
         <p class="product-copy">{{ $package->subtitle }}</p>
         <ul class="checklist">@foreach($package->featureList() as $feature)<li>{{ $feature }}</li>@endforeach</ul>

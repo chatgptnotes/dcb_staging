@@ -65,6 +65,10 @@
                     @csrf
                     <button class="enterprise-action" type="submit">Reveal only</button>
                   </form>
+                  <form method="post" action="{{ url('admin/organization-quotes/'.$quote->id.'/shared-code/rotate') }}" onsubmit="return confirm('Rotate this enterprise code? The current code will stop working immediately. Existing claimed seats will not be affected.')">
+                    @csrf
+                    <button class="enterprise-action" type="submit">Rotate code</button>
+                  </form>
                   @if($quote->enquiry?->contact_email)
                     <form method="post" action="{{ url('admin/organization-quotes/'.$quote->id.'/shared-code/send-email') }}">
                       @csrf

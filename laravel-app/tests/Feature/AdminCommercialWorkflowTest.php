@@ -10,6 +10,7 @@ use App\Models\OrganizationQuote;
 use App\Mail\OrganizationAccessCodeMail;
 use App\Models\PricingPackage;
 use App\Models\User;
+use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\StripePriceGateway;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Crypt;
@@ -55,7 +56,8 @@ class AdminCommercialWorkflowTest extends TestCase
                 'amount' => '37.50',
             'currency' => 'usd',
             'button_text' => 'Choose now',
-            'age_range' => 'Ages 13–15',
+            'minimum_age' => 13,
+            'maximum_age' => 15,
             'type' => 'one_time',
                 'sort_order' => 0,
                 'is_visible' => '1',
@@ -68,8 +70,15 @@ class AdminCommercialWorkflowTest extends TestCase
             'title' => 'Updated package',
             'amount' => '37.50',
             'price_label' => '$37.50',
-            'age_range' => 'Ages 13–15',
+            'minimum_age' => 13,
+            'maximum_age' => 15,
         ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/pricing-packages')
+            ->assertOk()
+            ->assertSee('Updated package')
+            ->assertSee('Ages 13–15');
 
         $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50')->assertSee('Ages 13–15');
     }
@@ -256,6 +265,55 @@ class AdminCommercialWorkflowTest extends TestCase
             ->assertOk()->assertSee('Toggle School')->assertSee('Export usage');
     }
 
+    public function test_admin_can_rotate_an_enterprise_code_without_changing_seat_usage(): void
+    {
+        $organization = Organization::create([
+            'name' => 'Rotation School',
+            'contact_name' => 'Rotation Contact',
+            'contact_email' => 'rotation-school@example.local',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TEST-CODE-ROTATION',
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 2,
+            'unit_amount_minor' => 2900,
+            'total_amount_minor' => 5800,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        $quote->seats()->createMany([
+            ['package_slug' => $quote->package_slug, 'access_term' => 'permanent', 'status' => 'claimed'],
+            ['package_slug' => $quote->package_slug, 'access_term' => 'permanent', 'status' => 'available'],
+        ]);
+
+        $codes = app(OrganizationCodeService::class);
+        $oldCode = $codes->createOrReplace($quote);
+        $oldHash = $quote->fresh()->shared_code_hash;
+
+        $this->actingAs($this->admin('code-rotation-admin@example.local'))
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/rotate')
+            ->assertRedirect()
+            ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'previous code is no longer valid'))
+            ->assertSessionHas('organization_code', fn (string $code): bool => $code !== $oldCode);
+
+        $quote->refresh();
+        $newCode = Crypt::decryptString($quote->shared_code_encrypted);
+        $this->assertNotSame($oldHash, $quote->shared_code_hash);
+        $this->assertNotSame($oldCode, $newCode);
+        $this->assertSame(1, $quote->seats()->where('status', 'claimed')->count());
+        $this->assertSame(1, $quote->seats()->where('status', 'available')->count());
+
+        try {
+            $codes->validateAvailability($oldCode);
+            $this->fail('The old enterprise code should be invalid after rotation.');
+        } catch (RuntimeException) {
+            // Expected: the code hash was replaced.
+        }
+
+        $this->assertSame($quote->id, $codes->validateAvailability($newCode)->id);
+    }
+
     public function test_agreements_list_shows_claimed_seat_usage_and_the_requested_sidebar_order(): void
     {
         $organization = Organization::create([
@@ -316,6 +374,7 @@ class AdminCommercialWorkflowTest extends TestCase
             'seat-usage-admin@example.local',
             'organization-email-admin@example.local',
             'toggle-payment-admin@example.local',
+            'code-rotation-admin@example.local',
         ])->delete();
     }
 }

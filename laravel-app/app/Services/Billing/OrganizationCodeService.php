@@ -6,6 +6,7 @@ namespace App\Services\Billing;
 
 use App\Models\OrganizationQuote;
 use App\Models\OrganizationSeat;
+use App\Models\PricingPackage;
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,20 @@ final class OrganizationCodeService
         return $code;
     }
 
+    /**
+     * Replace an active organisation code without affecting its claimed or
+     * available seats. Once the hash changes, the previous code can no longer
+     * be validated or redeemed.
+     */
+    public function rotate(OrganizationQuote $quote): string
+    {
+        if (! $quote->shared_code_hash || ! $quote->shared_code_encrypted) {
+            throw new RuntimeException('Generate an enterprise code before rotating it.');
+        }
+
+        return $this->createOrReplace($quote);
+    }
+
     public function disable(OrganizationQuote $quote): void
     {
         $this->setEnabled($quote, false);
@@ -84,6 +99,15 @@ final class OrganizationCodeService
         return $quote;
     }
 
+    /** Validate the age for a pending code before an account is created. */
+    public function validateAgeForCode(string $code, int $age): OrganizationQuote
+    {
+        $quote = $this->validateAvailability($code);
+        $this->assertAgeEligible($quote, $age);
+
+        return $quote;
+    }
+
     public function claim(string $code, User $user): OrganizationSeat
     {
         return DB::transaction(function () use ($code, $user) {
@@ -97,6 +121,7 @@ final class OrganizationCodeService
             if ($quote->access_term === 'fixed_term' && $quote->access_ends_at && $quote->access_ends_at->isPast()) {
                 throw new RuntimeException('This organisation access term has ended.');
             }
+            $this->assertAgeEligible($quote, $this->ageForUser($user));
             $seat = $quote->seats()->where('status', 'available')->orderBy('id')->lockForUpdate()->first();
             if (!$seat) {
                 throw new RuntimeException('All seats for this organisation code have already been claimed.');
@@ -110,5 +135,37 @@ final class OrganizationCodeService
             $this->entitlements->grantOrganizationSeat((int) $user->wp_user_id, $seat);
             return $seat->fresh();
         });
+    }
+
+    private function ageForUser(User $user): int
+    {
+        if (! $user->date_of_birth) {
+            throw new RuntimeException('A date of birth is required to use this organisation code.');
+        }
+
+        return now()->diffInYears($user->date_of_birth);
+    }
+
+    private function assertAgeEligible(OrganizationQuote $quote, int $age): void
+    {
+        $minimumAge = $quote->minimum_age;
+        $maximumAge = $quote->maximum_age;
+
+        if ($minimumAge === null && $maximumAge === null) {
+            $package = PricingPackage::where('slug', $quote->package_slug)->first(['minimum_age', 'maximum_age']);
+            $minimumAge = $package?->minimum_age;
+            $maximumAge = $package?->maximum_age;
+        }
+
+        if ($minimumAge === null && $maximumAge === null) {
+            return;
+        }
+
+        if (($minimumAge !== null && $age < $minimumAge) || ($maximumAge !== null && $age > $maximumAge)) {
+            $range = $minimumAge === null
+                ? 'up to age '.$maximumAge
+                : ($maximumAge === null ? 'ages '.$minimumAge.'+' : 'ages '.$minimumAge.'–'.$maximumAge);
+            throw new RuntimeException('This organisation code is available only to '.$range.'.');
+        }
     }
 }

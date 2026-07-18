@@ -263,7 +263,9 @@ class VoucherAdminController extends Controller
         }
         $agreedAmount = $this->usdToMinor($data['agreed_amount']);
 
-        [$quote, $alreadyExists] = DB::transaction(function () use ($data, $agreedAmount) {
+        $package = PricingPackage::where('slug', $data['package_slug'])->first(['minimum_age', 'maximum_age']);
+
+        [$quote, $alreadyExists] = DB::transaction(function () use ($data, $agreedAmount, $package) {
             $enquiry = OrganizationEnquiry::lockForUpdate()->findOrFail($data['organization_enquiry_id']);
             $existingQuote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->lockForUpdate()->first();
             if ($existingQuote) {
@@ -289,6 +291,8 @@ class VoucherAdminController extends Controller
                 'access_term' => 'permanent',
                 'access_ends_at' => null,
                 'expires_at' => null,
+                'minimum_age' => $package?->minimum_age,
+                'maximum_age' => $package?->maximum_age,
                 'internal_notes' => $data['internal_notes'] ?? null,
                 'customer_notes' => null,
                 'created_by_admin_id' => Auth::id(),
@@ -358,6 +362,24 @@ class VoucherAdminController extends Controller
         } catch (RuntimeException $e) {
             return back()->with('fail', $e->getMessage());
         }
+    }
+
+    /** Replace an active enterprise code while preserving its seat allocation. */
+    public function rotateSharedCode(int $id, OrganizationCodeService $codes): RedirectResponse
+    {
+        try {
+            $code = DB::transaction(function () use ($id, $codes): string {
+                $quote = OrganizationQuote::lockForUpdate()->findOrFail($id);
+
+                return $codes->rotate($quote);
+            });
+        } catch (RuntimeException $e) {
+            return back()->with('fail', $e->getMessage());
+        }
+
+        return back()
+            ->with('success', 'Enterprise code rotated. The previous code is no longer valid.')
+            ->with('organization_code', $code);
     }
 
     /** Email the currently active code to the contact who submitted this enquiry. */

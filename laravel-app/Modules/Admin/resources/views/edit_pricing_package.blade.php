@@ -11,7 +11,8 @@
       <div class="field"><label>Display order</label><input name="sort_order" type="number" min="0" value="{{ old('sort_order', $package->sort_order) }}" required></div>
       <div class="field"><label>Title</label><input name="title" value="{{ old('title', $package->title) }}" required></div>
       <div class="field"><label>Call-to-action</label><input name="button_text" value="{{ old('button_text', $package->button_text) }}" required></div>
-      <div class="field"><label>Age range</label><input name="age_range" value="{{ old('age_range', $package->age_range) }}" placeholder="Ages 12–15"></div>
+      <div class="field"><label>Minimum age</label><input name="minimum_age" type="number" min="0" max="120" value="{{ old('minimum_age', $package->minimum_age) }}" placeholder="12"></div>
+      <div class="field"><label>Maximum age <span class="muted">(optional)</span></label><input name="maximum_age" type="number" min="0" max="120" value="{{ old('maximum_age', $package->maximum_age) }}" placeholder="Leave empty for 18+"></div>
       <div class="field"><label>Charge amount</label><input name="amount" type="number" step="0.01" min="0" value="{{ old('amount', $package->amount) }}" required><span class="help">Used by individual purchase cards only.</span></div>
       <div class="field"><label>Currency</label><select name="currency">@foreach(['usd'=>'USD ($)','inr'=>'INR (₹)','eur'=>'EUR (€)','gbp'=>'GBP (£)'] as $code=>$label)<option value="{{ $code }}" @selected(strtolower(old('currency',$package->currency))===$code)>{{ $label }}</option>@endforeach</select></div>
       <div class="field"><label>Visible price label</label><input name="price_label" value="{{ old('price_label', $package->price_label) }}" placeholder="$29 or 5–6"></div>

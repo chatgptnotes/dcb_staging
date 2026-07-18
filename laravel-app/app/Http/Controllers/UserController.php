@@ -672,6 +672,11 @@ public function sign_up(Request $request) {
          if ($age < 12) {
              return back()->with('fail', 'You must be at least 12 years old to register.');
         }
+        try {
+            $this->validatePendingOrganizationCodeAge($age);
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->withErrors(['dob' => $e->getMessage()]);
+        }
 
         $payload = [
             'username' => $request->user_name,
@@ -814,6 +819,11 @@ private function signUpNative(Request $request)
     if ($age < 12) {
         return back()->withInput()->with('fail', 'You must be at least 12 years old to register.');
     }
+    try {
+        $this->validatePendingOrganizationCodeAge($age);
+    } catch (\RuntimeException $e) {
+        return back()->withInput()->withErrors(['dob' => $e->getMessage()]);
+    }
 
     $username = trim($request->user_name);
     $email = mb_strtolower(trim($request->email));
@@ -876,6 +886,23 @@ private function rememberPurchaseFlow(Request $request): void
     if ((string) $request->input('purchase_flow', $request->query('purchase_flow', '')) === '1') {
         session(['new_purchase_flow' => true]);
     }
+}
+
+/** Reject an out-of-range pending organisation code before account creation. */
+private function validatePendingOrganizationCodeAge(int $age): void
+{
+    $encryptedCode = (string) session('pending_organization_code');
+    if ($encryptedCode === '') {
+        return;
+    }
+
+    try {
+        $code = Crypt::decryptString($encryptedCode);
+    } catch (\Throwable) {
+        throw new \RuntimeException('Your organisation code session has expired. Please enter the code again.');
+    }
+
+    app(\App\Services\Billing\OrganizationCodeService::class)->validateAgeForCode($code, $age);
 }
 
 /**

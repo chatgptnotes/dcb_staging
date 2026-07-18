@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\PricingPackage;
 use App\Models\WPUsers;
 use App\Services\Billing\EntitlementService;
+use App\Services\Billing\CheckoutPaymentRecorder;
 use App\Services\Billing\PackageCatalog;
 use App\Services\Billing\StripePriceManager;
 use App\Services\Billing\VoucherService;
@@ -28,6 +29,7 @@ class CheckoutController extends Controller
         private PackageCatalog $catalog,
         private EntitlementService $entitlements,
         private VoucherService $vouchers,
+        private CheckoutPaymentRecorder $payments,
     ) {
     }
 
@@ -203,6 +205,7 @@ class CheckoutController extends Controller
                 ]);
 
                 if ($paid && $this->catalog->exists($package)) {
+                    $this->payments->recordSuccessfulCheckout($session->toArray());
                     if ($wpId > 0) {
                         $user = $this->finalizeCheckoutUser($wpId, $session);
                         if ($user !== null) {

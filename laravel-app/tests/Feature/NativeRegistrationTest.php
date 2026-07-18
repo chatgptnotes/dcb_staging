@@ -120,7 +120,7 @@ class NativeRegistrationTest extends TestCase
         $this->flushSession();
 
         $response = $this->post('/sign-up', $this->validPayload(['user_name' => 'different_name']));
-        $response->assertSessionHas('fail');
+        $response->assertSessionHasErrors('email');
         $this->assertSame(1, User::where('email', self::EMAIL)->count());
     }
 
@@ -130,7 +130,7 @@ class NativeRegistrationTest extends TestCase
         $this->flushSession();
 
         $response = $this->post('/sign-up', $this->validPayload(['email' => 'other-'.self::EMAIL]));
-        $response->assertSessionHas('fail');
+        $response->assertSessionHasErrors('user_name');
 
         // cleanup the alternate email if it somehow got through
         User::where('email', 'other-'.self::EMAIL)->delete();
