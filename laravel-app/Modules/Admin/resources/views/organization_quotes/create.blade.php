@@ -16,7 +16,7 @@
       <div class="field"><label>Agreed price (USD)</label><input name="agreed_amount" value="{{ old('agreed_amount') }}" placeholder="240.00" required></div>
       <div class="field"><label>Billing type</label><input value="One-time payment" disabled></div>
       <div class="field"><label>Access</label><input value="Permanent" disabled></div>
-      <div class="field full"><label>Internal notes</label><textarea name="internal_notes">{{ old('internal_notes') }}</textarea></div>
+      <div class="field full"><label>Payment notes</label><textarea name="internal_notes" minlength="3" required>{{ old('internal_notes') }}</textarea></div>
     </div></div></section>
     <aside><section class="panel payment-card"><h2 class="panel-title">Payment</h2><div class="notice" style="margin-top:18px">Payment received activates the requested assessment seats and securely generates the enterprise access code after this deal is saved.</div><label class="toggle-row"><input class="toggle" type="checkbox" name="payment_received" value="1" @checked(old('payment_received'))> Payment received</label><button class="primary-button" style="width:100%;margin-top:20px">Save deal</button></section></aside>
   </div></form>

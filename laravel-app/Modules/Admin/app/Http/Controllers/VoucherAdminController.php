@@ -256,7 +256,14 @@ class VoucherAdminController extends Controller
             'package_slug' => ['required', 'string', 'max:120'],
             'seat_count' => ['required', 'integer', 'min:1', 'max:100000'],
             'agreed_amount' => ['required', 'regex:/^\d+(\.\d{1,2})?$/'],
-            'internal_notes' => ['nullable', 'string', 'max:5000'],
+            'internal_notes' => [
+                'bail', 'required', 'string', 'min:3', 'max:5000',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (Str::length(trim((string) $value)) < 3) {
+                        $fail('Payment notes must contain at least 3 characters.');
+                    }
+                },
+            ],
             'payment_received' => ['nullable', 'boolean'],
         ]);
         if (!$catalog->exists($data['package_slug']) || $data['package_slug'] === $catalog->freeSlug()) {
@@ -294,7 +301,7 @@ class VoucherAdminController extends Controller
                 'expires_at' => null,
                 'minimum_age' => $package?->minimum_age,
                 'maximum_age' => $package?->maximum_age,
-                'internal_notes' => $data['internal_notes'] ?? null,
+                'internal_notes' => trim($data['internal_notes']),
                 'customer_notes' => null,
                 'created_by_admin_id' => Auth::id(),
                 'status' => 'draft',
@@ -434,7 +441,7 @@ class VoucherAdminController extends Controller
     /** Reveal the real redeemable organisation code; the visible hint is not a code. */
     public function revealSharedCode(int $id): RedirectResponse
     {
-        $quote = OrganizationQuote::findOrFail($id);
+        $quote = OrganizationQuote::with('organization')->findOrFail($id);
         if (!$quote->shared_code_encrypted || !$quote->shared_code_enabled) {
             return back()->with('fail', 'This organisation does not have an active member code.');
         }
@@ -442,7 +449,8 @@ class VoucherAdminController extends Controller
         try {
             return back()
                 ->with('success', 'Full organisation code revealed. Copy it exactly; the quote number and masked hint cannot be redeemed.')
-                ->with('organization_code', Crypt::decryptString($quote->shared_code_encrypted));
+                ->with('organization_code', Crypt::decryptString($quote->shared_code_encrypted))
+                ->with('organization_name', $quote->organization?->name);
         } catch (\Throwable $e) {
             report($e);
             return back()->with('fail', 'This organisation code could not be revealed.');

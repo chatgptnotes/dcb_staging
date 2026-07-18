@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * Native email one-time-password (OTP) for registration, login 2FA, and
- * password reset. Codes are 6-digit, hashed at rest, single-use, short-lived,
+ * Native email one-time-password (OTP) for registration and password reset.
+ * Codes are 6-digit, hashed at rest, single-use, short-lived,
  * and rate-limited. Sent over the configured mailer (Gmail SMTP).
  */
 final class OtpService
@@ -27,7 +27,7 @@ final class OtpService
      * Generate, store, and email a fresh OTP. Returns false if the send rate
      * limit was hit.
      */
-    private const PURPOSES = ['register', 'login', 'reset'];
+    private const PURPOSES = ['register', 'reset'];
 
     public function send(string $email, string $purpose): bool
     {

@@ -302,22 +302,6 @@ private function signInNative(Request $request)
         }
     }
 
-    // Login 2FA: email a code and complete the session only after it's confirmed.
-    if (config('app.otp_enabled')) {
-        // Rotate the session id before stashing identity (anti-fixation).
-        $request->session()->regenerate();
-        session(['pending_login' => [
-            'wp_user_id' => $user->wp_user_id,
-            'email' => $user->email,
-            'sso_link' => $ssoLink,
-        ]]);
-        $sent = app(\App\Services\Auth\OtpService::class)->send((string) $user->email, 'login');
-        if (! $sent) {
-            return back()->with('fail', 'Too many code requests. Please wait a few minutes and try again.');
-        }
-        return redirect('verify-login-otp')->with('success', 'We emailed a login code to '.$user->email.'.');
-    }
-
     return $this->completeNativeLogin($user, $ssoLink, $request);
 }
 
@@ -367,8 +351,7 @@ private function ensureLoginIdentity(User $user): User
 
 /**
  * Finish a native login: set session keys, ensure the WPUsers mirror exists,
- * carry the sso_link, then run the shared post-auth redirect. Shared by the
- * direct login and the 2FA-verified login.
+ * carry the sso_link, then run the shared post-auth redirect.
  */
 private function completeNativeLogin(User $user, ?string $ssoLink, Request $request)
 {
@@ -404,36 +387,6 @@ private function completeNativeLogin(User $user, ?string $ssoLink, Request $requ
     \Log::info('Native login success', ['user_id' => $user->wp_user_id]);
 
     return $this->adoptGuestAnswersAndRedirect($request);
-}
-
-/**
- * Login 2FA: confirm the emailed code, then complete the held login.
- */
-public function verifyLoginOtp(Request $request)
-{
-    $pending = session('pending_login');
-    if (! $pending) {
-        return redirect('sign-in')->with('fail', 'Your login session expired. Please sign in again.');
-    }
-
-    if ($request->isMethod('get')) {
-        return view('user/verify_login_otp', ['email' => $pending['email']]);
-    }
-
-    $request->validate(['otp' => 'required|string']);
-
-    if (! app(\App\Services\Auth\OtpService::class)->verify($pending['email'], 'login', $request->otp)) {
-        return back()->with('fail', 'Invalid or expired code. Please try again.');
-    }
-
-    $user = User::where('wp_user_id', $pending['wp_user_id'])->first();
-    if (! $user) {
-        return redirect('sign-in')->with('fail', 'Account not found. Please sign in again.');
-    }
-
-    session()->forget('pending_login');
-
-    return $this->completeNativeLogin($user, $pending['sso_link'] ?? null, $request);
 }
 
 /**
@@ -1007,7 +960,7 @@ public function verifyEmailOtp(Request $request)
 }
 
 /**
- * Resend a code for whichever OTP flow is pending in the session.
+ * Resend the registration verification code held in the session.
  */
 public function resendOtp(Request $request)
 {
@@ -1018,12 +971,6 @@ public function resendOtp(Request $request)
         return back()->with($sent ? 'success' : 'fail',
             $sent ? 'A new code has been sent.' : 'Too many code requests. Please wait a few minutes.');
     }
-    if ($pending = session('pending_login')) {
-        $sent = $otp->send($pending['email'], 'login');
-        return back()->with($sent ? 'success' : 'fail',
-            $sent ? 'A new code has been sent.' : 'Too many code requests. Please wait a few minutes.');
-    }
-
     return redirect('sign-in')->with('fail', 'Nothing to resend. Please start again.');
 }
 

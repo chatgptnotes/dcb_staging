@@ -411,3 +411,101 @@ has 188 rows and is referenced by active application code.
 - A local safety stash remains for later review:
   `stash@{0}: pre-clean-history`. Do not delete it until its contents have
   been checked and confirmed unnecessary.
+
+## 17 July 2026 — Admin, enquiry, report, and public-funnel work
+
+### Registration, enquiry, and email
+
+- Registration date of birth now uses the explicit `DD/MM/YYYY` format. The
+  server validates this format, rejects future dates and under-age dates, and
+  saves a normal database date value.
+- Application/reporting time zone is set to `Asia/Kolkata`; enquiry timestamps
+  in Admin show both date and time in that zone.
+- Organisation enquiry forms retain the submitter email. Once an Admin has
+  activated an enterprise code, the **Send email** action sends that active
+  code only to the email address on the linked enquiry. Re-sending is allowed.
+- The Small Group public card now redirects to the organisation enquiry form.
+
+### Commercial Admin redesign
+
+- Rebuilt the visible Admin dashboard, Users, Payments, Plans, Inquiries,
+  Agreements, and Enterprise Codes views around the supplied black/yellow/
+  cream reference style. The old User Management screens/routes were hidden
+  from navigation only; they were not deleted.
+- Added the Insights-style sidebar and retained the original legacy pages and
+  generic voucher pages for backwards compatibility.
+- Plans are now shown as editable Core, Plus, and Small Group cards. Added an
+  enquiry-only Small Group catalogue entry with editable title, description,
+  features, display price/suffix, CTA, visibility, and order. Enquiry-only
+  plans cannot enter individual Stripe checkout.
+- Organisation Enquiries is visibly named **Inquiries**. It retains statuses,
+  received time, contact data, and Create/Open deal actions.
+- Agreements now have the requested **Payment received** toggle:
+  - Toggle off: save an unpaid draft with no seats or enterprise code.
+  - Toggle on when saving: save the deal first, then record payment, allocate
+    seats, and generate the secure enterprise code.
+  - Existing unpaid deals have the same toggle on their agreement page.
+- Added a dedicated Enterprise Codes page with masked codes, issued/
+  registered/completed/remaining usage counts, secure reissue, and CSV export.
+  Code reveal and email remain explicit Admin actions; visible table values are
+  not redeemable codes.
+- Applied migration
+  `2026_07_17_000001_add_enquiry_cta_to_pricing_packages` locally.
+
+### Public-site visual redesign and purchase funnel
+
+- Removed the narrow public-page shell and contrasting side margins. The
+  public layout is now full width with a consistent background.
+- Added a low-opacity, slowly rotating, code-native brain watermark behind the
+  landing hero. It is decorative, does not intercept clicks, and stops moving
+  for `prefers-reduced-motion` users.
+- The landing **Take the assessment** button now opens the public choice page:
+  **I have a code** or **I'll pay myself**.
+- **I'll pay myself** leads to Plans. A guest selects a plan, uses the existing
+  registration/sign-in popup, then continues directly to Stripe checkout.
+  Signed-in customers also continue directly to checkout. The former repeated
+  code/payment screen after registration was removed.
+- Public code handling now works before sign-in:
+  - Permanent voucher and organisation code: validate availability, then ask
+    the visitor to register/sign in; once authenticated, securely claim the
+    voucher/seat and start the assessment.
+  - Stripe discount voucher: validate first, then after authentication send the
+    user to Stripe checkout with the discount safely applied.
+  - Invalid, expired, disabled, wrong-package, exhausted, or otherwise
+    unavailable codes remain on the choice screen with an error and no access.
+- Existing email-bound voucher validation, organisation-seat availability,
+  code hashing/encryption, and Stripe checkout rules remain in place.
+
+### Assessment report workflow (current implementation)
+
+- Main assessment answers are saved question-by-question. On the final main
+  question, the attempt is marked complete and scored.
+- Ranked answer positions receive 5/4/2/1 points. Totals are calculated for
+  L1, L2, R1, and R2, converted to percentages, and stored in `brain_scores`.
+  Cerebral and limbic totals are compared to set the saved overall style.
+- Each raw score is banded into code 1, 2, or 3. The four-part result code is
+  matched against `profile_types`; the matching profile ID is saved on the
+  user record.
+- Users aged 15+ also complete a separate dimensional assessment, which stores
+  analytical, realistic, creative, strategic, protective, and practical
+  results separately.
+- Basic result download renders a PDF directly from saved score and user data.
+  Full paid report download selects a prepared report template using the saved
+  profile and age band (12–14, 15–18, or 18+), loads it locally or from the
+  report server if needed, generates a personalised user page, merges the PDFs
+  with FPDI, and downloads the final `brain_report.pdf`.
+- Reports are interpretative educational/self-reflection material and are not
+  medical or psychological diagnoses.
+
+### Verification and local runtime
+
+- The relevant focused suite passed after the work: **36 tests, 166
+  assertions**. It covers the public choice page, invalid public code,
+  organisation-code claim after sign-in, direct checkout after registration
+  and OTP verification, plan selection, commercial admin workflows, and
+  Insights screens.
+- PHP syntax checks, route checks, Blade cache, and public HTTP checks passed.
+  Local server was verified on `http://127.0.0.1:8000`.
+- The worktree contains intentional application changes from this work plus
+  pre-existing user-owned changes. Do not reset, discard, or overwrite
+  unrelated files without review.
