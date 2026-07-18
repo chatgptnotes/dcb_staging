@@ -180,7 +180,7 @@ class OrganizationCodeServiceTest extends TestCase
         $code = app(OrganizationCodeService::class)->createOrReplace($quote);
         $email = 'org-code-signup-'.$suffix.'@example.local';
 
-        $this->withSession(['pending_organization_code' => Crypt::encryptString($code)])
+        $response = $this->withSession(['pending_organization_code' => Crypt::encryptString($code)])
             ->post('/sign-up', [
                 'first_name' => 'Age',
                 'last_name' => 'Mismatch',
@@ -189,8 +189,13 @@ class OrganizationCodeServiceTest extends TestCase
                 'email' => $email,
                 'password' => 'safe-test-password',
                 'password_confirmation' => 'safe-test-password',
-            ])
-            ->assertSessionHasErrors(['dob' => 'This organisation code is available only to ages 12–15.']);
+            ]);
+
+        $response->assertSessionHasErrors(['dob' => 'This organisation code is available only to ages 12–15.']);
+        $this->get('/sign-up')->assertOk()
+            ->assertSee('This organisation code is available only to ages 12–15.')
+            ->assertSee('is-invalid', false)
+            ->assertSee('aria-invalid="true"', false);
 
         $this->assertDatabaseMissing('users', ['email' => $email]);
         $this->assertDatabaseHas('organization_seats', [

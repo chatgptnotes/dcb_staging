@@ -254,7 +254,7 @@ private function signInNative(Request $request)
     }
 
     $wpHash = app(\App\Services\Auth\WpHashService::class);
-    $user = $this->findNativeLoginUser($login, (string) $request->password, $wpHash);
+    $user = $this->findNativeLoginUser($login);
 
     if (!$user || strtolower((string) $user->status) !== 'active' || !$wpHash->check((string) $request->password, (string) $user->password)) {
         // Equalize timing for unknown logins to prevent username enumeration.
@@ -320,45 +320,14 @@ private function signInNative(Request $request)
 }
 
 /**
- * Find a local user by username/email. If an older account exists only in the
- * WordPress mirror, verify its existing hash first and materialize the native
- * user record only after that verification succeeds.
+ * Find a native account by username/email. The wp_users table is an identity
+ * and entitlement mirror only; it deliberately has no password hashes. A
+ * mirror-only account must therefore activate through the OTP reset flow.
  */
-private function findNativeLoginUser(string $login, string $password, \App\Services\Auth\WpHashService $wpHash): ?User
+private function findNativeLoginUser(string $login): ?User
 {
-    $user = User::where('username', $login)->orderBy('id')->first()
+    return User::where('username', $login)->orderBy('id')->first()
         ?? User::where('email', $login)->where('email', '!=', '')->orderBy('id')->first();
-
-    if ($user) {
-        return $user;
-    }
-
-    $legacy = WPUsers::where('email', $login)
-        ->whereNotNull('user_id')
-        ->whereNotNull('password')
-        ->first();
-
-    if (! $legacy || ! $wpHash->check($password, (string) $legacy->password)) {
-        return null;
-    }
-
-    $existing = User::where('wp_user_id', $legacy->user_id)->first();
-    if ($existing) {
-        return $existing;
-    }
-
-    $user = new User();
-    $user->wp_user_id = (int) $legacy->user_id;
-    $user->username = (string) $legacy->email;
-    $user->email = (string) $legacy->email;
-    $user->display_name = (string) $legacy->display_name;
-    $user->date_of_birth = $legacy->date_of_birth;
-    $user->password = (string) $legacy->password;
-    $user->user_role = '2';
-    $user->status = 'active';
-    $user->save();
-
-    return $user;
 }
 
 /** Ensure a verified user has the legacy identity and mirror expected by the member area. */
@@ -1571,14 +1540,25 @@ public function forgot_password(Request $request)
 
         $identifier = trim($request->identifier);
 
-        // Resolve to a local account by username or email.
+        $email = mb_strtolower($identifier);
+
+        // Prefer a native account. If the person exists only in the legacy
+        // mirror, let them prove control of its email before we create their
+        // first native password record in verify_otp().
         $user = User::whereNotNull('wp_user_id')->where('username', $identifier)->first()
-            ?? User::whereNotNull('wp_user_id')->where('email', mb_strtolower($identifier))->where('email', '!=', '')->first();
+            ?? User::whereNotNull('wp_user_id')->where('email', $email)->where('email', '!=', '')->first();
+        $legacy = $user ? null : WPUsers::whereNotNull('user_id')
+            ->where('email', $email)
+            ->where('email', '!=', '')
+            ->first();
 
         // Always show the same response (don't reveal whether the account exists).
-        if ($user && $user->email) {
-            app(\App\Services\Auth\OtpService::class)->send((string) $user->email, 'reset');
-            session(['reset_email' => mb_strtolower($user->email)]);
+        $resetEmail = $user?->email ?? $legacy?->email;
+        if ($resetEmail && app(\App\Services\Auth\OtpService::class)->send((string) $resetEmail, 'reset')) {
+            session([
+                'reset_email' => mb_strtolower((string) $resetEmail),
+                'reset_wp_user_id' => $legacy?->user_id,
+            ]);
         }
 
         return redirect('verify-otp')->with('success', "If that account exists, we've emailed a reset code.");
@@ -1609,18 +1589,76 @@ public function verify_otp(Request $request)
             return back()->with('fail', 'Invalid or expired code. Please try again.');
         }
 
-        $localUser = User::whereNotNull('wp_user_id')->where('email', $email)->first();
-        if ($localUser) {
-            $localUser->password = Hash::make($request->password);
-            $localUser->save();
+        try {
+            $localUser = $this->resetNativePassword(
+                (string) $email,
+                (string) $request->password,
+                (int) session('reset_wp_user_id') ?: null,
+            );
+        } catch (\Throwable $e) {
+            \Log::error('Password reset account activation failed', ['email_hash' => sha1((string) $email), 'error' => $e->getMessage()]);
+            return redirect('forgot-password')->with('fail', 'We could not reset your password. Please try again.');
         }
 
-        session()->forget('reset_email');
+        if (! $localUser) {
+            return redirect('forgot-password')->with('fail', 'Your reset session expired. Please start again.');
+        }
+
+        session()->forget(['reset_email', 'reset_wp_user_id']);
 
         return redirect('sign-in')->with('success', "Password reset successful. Please login.");
     }
 
 
+}
+
+/**
+ * Reset a native password or, after an email OTP proves ownership, activate a
+ * mirror-only account in the users table without changing its wp_users row.
+ */
+private function resetNativePassword(string $email, string $password, ?int $legacyWpUserId): ?User
+{
+    return DB::transaction(function () use ($email, $password, $legacyWpUserId) {
+        $normalizedEmail = mb_strtolower(trim($email));
+        $user = User::whereNotNull('wp_user_id')->where('email', $normalizedEmail)->lockForUpdate()->first();
+
+        if (! $user && $legacyWpUserId) {
+            $user = User::where('wp_user_id', $legacyWpUserId)->lockForUpdate()->first();
+        }
+
+        if (! $user) {
+            $legacy = WPUsers::whereNotNull('user_id')
+                ->where('email', $normalizedEmail)
+                ->lockForUpdate()
+                ->first();
+            if (! $legacy) {
+                return null;
+            }
+
+            $user = User::where('wp_user_id', $legacy->user_id)->lockForUpdate()->first();
+            if (! $user) {
+                $user = new User();
+                $user->wp_user_id = (int) $legacy->user_id;
+                $user->username = (string) $legacy->email;
+                $user->email = $normalizedEmail;
+                $user->display_name = $legacy->display_name;
+                $user->date_of_birth = $legacy->date_of_birth;
+                $user->user_role = '2';
+                $user->status = 'active';
+            }
+        }
+
+        // A linked native row with a different email must not be claimed by
+        // this reset. It requires a support-led identity correction instead.
+        if (mb_strtolower((string) $user->email) !== $normalizedEmail) {
+            return null;
+        }
+
+        $user->password = Hash::make($password);
+        $user->save();
+
+        return $user;
+    });
 }
 
 public function register(Request $request)
