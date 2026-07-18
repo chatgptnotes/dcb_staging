@@ -361,7 +361,7 @@ header{
                         <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" aria-current="page" href="{{url('dashboard')}}">Dashboard</a>
                     </li>
                     <?php if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect'){ ?>
-                    <li class="nav-item">
+                    <li class="nav-item" style="display: none;"> {{-- Hidden from navigation; keep route available. --}}
                         <a class="nav-link {{ request()->is('careers') ? 'active' : '' }}" aria-current="page" href="{{url('careers')}}">Careers</a>
                     </li>
                     <?php } ?>
@@ -383,7 +383,7 @@ header{
                         <a class="nav-link {{ request()->is('billing') ? 'active' : '' }}" aria-current="page" href="{{url('billing')}}">Billing</a>
                     </li> --}}
 
-                    <li class="nav-item">
+                    <li class="nav-item" style="display: none;"> {{-- Hidden from navigation; keep route available. --}}
                         <a class="nav-link" aria-current="page" href="{{url('billing')}}" target="_blank">Billing</a>
                     </li>
                     <?php if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect'){ ?>
@@ -429,7 +429,7 @@ header{
                 <!--</div>-->
 
                 <div class="d-flex align-items-center gap-3">
-                    <div class="header-notification">
+                    <div class="header-notification" style="display: none;"> {{-- Hidden from the dashboard header; notification data remains available. --}}
                         <ul class="notification-drop">
                             <li class="item">
                                 <i class="fa-solid fa-bell notification-bell" style="color: #85D6A5 !important" aria-hidden="true"></i> <span class="btn__badge pulse-button ">{{count($events)}}</span>
@@ -480,7 +480,7 @@ header{
                         <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" aria-current="page" href="{{url('dashboard')}}">Dashboard</a>
                     </li>
                     <?php if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect'){ ?>
-                    <li class="nav-item">
+                    <li class="nav-item" style="display: none;"> {{-- Hidden from navigation; keep route available. --}}
                         <a class="nav-link {{ request()->is('careers') ? 'active' : '' }}" aria-current="page" href="{{url('careers')}}">Careers</a>
                     </li>
                     <?php } ?>
@@ -498,7 +498,7 @@ header{
                         <a class="nav-link {{ request()->is('events') ? 'active' : '' }}" aria-current="page" href="{{url('events')}}">Our Events</a>
                     </li> -->
                     <?php } ?>
-                    <li class="nav-item">
+                    <li class="nav-item" style="display: none;"> {{-- Hidden from navigation; keep route available. --}}
                         <a class="nav-link {{ request()->is('billing') ? 'active' : '' }}" aria-current="page" href="{{url('billing')}}">Billing</a>
                     </li>
                     <?php if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect'){ ?>

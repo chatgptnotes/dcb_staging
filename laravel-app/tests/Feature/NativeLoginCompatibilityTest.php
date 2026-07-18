@@ -6,7 +6,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\WPUsers;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class NativeLoginCompatibilityTest extends TestCase
@@ -22,6 +24,7 @@ class NativeLoginCompatibilityTest extends TestCase
         config()->set('app.auth_driver', 'native');
         config()->set('app.otp_enabled', false);
         config()->set('packages.funnel', 'free_first');
+        Mail::fake();
         $this->cleanup();
     }
 
@@ -52,21 +55,77 @@ class NativeLoginCompatibilityTest extends TestCase
         $this->assertTrue(Hash::check('correct horse battery staple', $user->password));
     }
 
-    public function test_legacy_mirror_only_account_can_sign_in_by_email(): void
+    public function test_mirror_only_account_cannot_crash_native_sign_in(): void
     {
         $mirror = new WPUsers();
         $mirror->user_id = self::MIRROR_WP_ID;
         $mirror->email = self::LEGACY_EMAIL;
         $mirror->display_name = 'Mirror Only';
         $mirror->date_of_birth = '1990-01-01';
-        $mirror->password = Hash::make('Secret#2026');
         $mirror->package = 'free';
         $mirror->save();
 
         $this->post('/sign-in', ['user_name' => self::LEGACY_EMAIL, 'password' => 'Secret#2026'])
+            ->assertStatus(302)
+            ->assertSessionHas('fail');
+
+        $this->assertFalse(User::where('wp_user_id', self::MIRROR_WP_ID)->exists());
+    }
+
+    public function test_mirror_only_account_is_activated_after_email_reset(): void
+    {
+        $mirror = new WPUsers();
+        $mirror->user_id = self::MIRROR_WP_ID;
+        $mirror->email = self::LEGACY_EMAIL;
+        $mirror->display_name = 'Mirror Only';
+        $mirror->date_of_birth = '1990-01-01';
+        $mirror->package = 'decodemybrain-deep-dive';
+        $mirror->save();
+
+        $this->post('/forgot-password', ['identifier' => self::LEGACY_EMAIL])
+            ->assertRedirect('verify-otp');
+
+        DB::table('email_otps')->where('email', self::LEGACY_EMAIL)->where('purpose', 'reset')->update([
+            'code_hash' => Hash::make('654321'),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this->post('/verify-otp', [
+            'otp' => '654321',
+            'password' => 'NewSecret#2026',
+            'password_confirmation' => 'NewSecret#2026',
+        ])->assertRedirect('sign-in');
+
+        $user = User::where('wp_user_id', self::MIRROR_WP_ID)->first();
+        $this->assertNotNull($user);
+        $this->assertSame(self::LEGACY_EMAIL, $user->email);
+        $this->assertSame('Mirror Only', $user->display_name);
+        $this->assertTrue(Hash::check('NewSecret#2026', $user->password));
+        $this->assertSame('decodemybrain-deep-dive', WPUsers::where('user_id', self::MIRROR_WP_ID)->value('package'));
+
+        // A later reset must update the same native record, not create a
+        // second account for the mirror identity.
+        $this->post('/forgot-password', ['identifier' => self::LEGACY_EMAIL])
+            ->assertRedirect('verify-otp');
+        DB::table('email_otps')->where('email', self::LEGACY_EMAIL)->where('purpose', 'reset')->update([
+            'code_hash' => Hash::make('654322'),
+            'attempts' => 0,
+            'expires_at' => now()->addMinutes(10),
+        ]);
+        $this->post('/verify-otp', [
+            'otp' => '654322',
+            'password' => 'SecondSecret#2026',
+            'password_confirmation' => 'SecondSecret#2026',
+        ])->assertRedirect('sign-in');
+
+        $user->refresh();
+        $this->assertTrue(Hash::check('SecondSecret#2026', $user->password));
+
+        $this->post('/sign-in', ['user_name' => self::LEGACY_EMAIL, 'password' => 'SecondSecret#2026'])
             ->assertRedirect('intro');
 
-        $this->assertTrue(User::where('wp_user_id', self::MIRROR_WP_ID)->exists());
+        $this->assertSame(1, User::where('wp_user_id', self::MIRROR_WP_ID)->count());
     }
 
     private function cleanup(): void
@@ -74,5 +133,6 @@ class NativeLoginCompatibilityTest extends TestCase
         $userIds = User::whereIn('email', [self::EMAIL, self::LEGACY_EMAIL])->pluck('wp_user_id')->filter()->all();
         User::whereIn('email', [self::EMAIL, self::LEGACY_EMAIL])->delete();
         WPUsers::whereIn('user_id', array_unique([...$userIds, self::WP_ID, self::MIRROR_WP_ID]))->delete();
+        DB::table('email_otps')->where('email', self::LEGACY_EMAIL)->delete();
     }
 }
