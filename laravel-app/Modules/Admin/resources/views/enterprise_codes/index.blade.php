@@ -13,6 +13,7 @@
   @if(session('organization_code'))
     <div class="alert success">
       <strong>Enterprise code:</strong> <code id="organization-code">{{ session('organization_code') }}</code>
+      @if(session('organization_name'))<div><strong>Organisation:</strong> {{ session('organization_name') }}</div>@endif
       <button class="action-link" type="button" id="copy-organization-code">Copy code</button>
       <div class="secondary">Copy this one-time reveal securely; the table shows a masked reference only.</div>
     </div>

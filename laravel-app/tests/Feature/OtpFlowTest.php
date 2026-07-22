@@ -126,7 +126,7 @@ class OtpFlowTest extends TestCase
             ->assertRedirect(route('checkout.start', 'decodemybrain-deep-dive'));
     }
 
-    public function test_login_requires_2fa_code(): void
+    public function test_login_does_not_send_or_require_an_otp(): void
     {
         // existing native user
         $user = new User();
@@ -142,14 +142,11 @@ class OtpFlowTest extends TestCase
 
         // Step 1: correct password → not logged in yet, OTP emailed, redirect.
         $this->post('/sign-in', ['user_name' => self::USERNAME, 'password' => 'Secret#2026'])
-            ->assertRedirect('verify-login-otp');
-        $this->assertNull(session('user_id'), 'must not be logged in before 2FA');
-        Mail::assertSent(OtpMail::class);
+            ->assertRedirect('intro');
 
         // Step 2: the code → logged in.
-        $this->forceCode('login', '112233');
-        $this->post('/verify-login-otp', ['otp' => '112233'])->assertRedirect('intro');
         $this->assertSame(990333, (int) session('user_id'));
+        Mail::assertNothingSent();
 
         WPUsers::where('user_id', 990333)->delete();
     }

@@ -306,6 +306,7 @@ class AdminCommercialWorkflowTest extends TestCase
             'package_slug' => 'decodemybrain-deep-dive',
             'seat_count' => 3,
             'agreed_amount' => '29.00',
+            'internal_notes' => 'Payment confirmed by finance.',
             'payment_received' => '1',
         ])->assertRedirect('/admin/enterprise-codes')->assertSessionHas('organization_code');
 
@@ -322,6 +323,12 @@ class AdminCommercialWorkflowTest extends TestCase
 
         $this->actingAs($admin)->get('/admin/enterprise-codes')
             ->assertOk()->assertSee('Toggle School')->assertSee('Export usage');
+
+        $this->actingAs($admin)
+            ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/reveal')
+            ->assertRedirect()
+            ->assertSessionHas('organization_code')
+            ->assertSessionHas('organization_name', 'Toggle School');
     }
 
     public function test_admin_can_rotate_an_enterprise_code_without_changing_seat_usage(): void

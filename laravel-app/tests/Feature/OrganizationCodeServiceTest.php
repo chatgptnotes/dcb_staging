@@ -411,6 +411,7 @@ class OrganizationCodeServiceTest extends TestCase
                 'package_slug' => 'decodemybrain-deep-dive',
                 'seat_count' => 2,
                 'agreed_amount' => '29.00',
+                'internal_notes' => 'Payment awaiting transfer.',
             ])
             ->assertSessionHas('success', fn (string $message): bool => str_contains($message, 'Record payment'));
 

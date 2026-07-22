@@ -59,9 +59,8 @@ Route::match(['get', 'post'],'/questions/game/game-4', [QuestionsController::cla
 Route::match(['get', 'post'],'/questions/game/game-5', [QuestionsController::class, 'game_5'])->middleware('requirePaid');
 Route::match(['get', 'post'],'/sign-in', [UserController::class, 'sign_in']);
 Route::match(['get', 'post'],'/sign-up', [UserController::class, 'sign_up'])->middleware('throttle:20,1');
-// Email-OTP steps (active when OTP_ENABLED): registration verification + login 2FA.
+// Email-OTP steps (active when OTP_ENABLED): registration verification only.
 Route::match(['get', 'post'],'/verify-email-otp', [UserController::class, 'verifyEmailOtp'])->middleware('throttle:20,1');
-Route::match(['get', 'post'],'/verify-login-otp', [UserController::class, 'verifyLoginOtp'])->middleware('throttle:20,1');
 Route::post('/resend-otp', [UserController::class, 'resendOtp'])->middleware('throttle:6,1');
 Route::match(['get', 'post'],'/logout', [UserController::class, 'logout']);
 Route::match(['get', 'post'],'/forgot-password', [UserController::class, 'forgot_password'])->middleware('throttle:20,1');
