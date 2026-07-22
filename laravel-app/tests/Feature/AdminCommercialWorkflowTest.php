@@ -12,6 +12,7 @@ use App\Mail\OrganizationCodeUsageMail;
 use App\Models\OrganizationSeat;
 use App\Models\PricingPackage;
 use App\Models\User;
+use App\Models\WPUsers;
 use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\OrganizationSeatService;
 use App\Services\Billing\StripePriceGateway;
@@ -84,6 +85,27 @@ class AdminCommercialWorkflowTest extends TestCase
             ->assertSee('Ages 13–15');
 
         $this->get('/plans')->assertOk()->assertSee('Updated package')->assertSee('$37.50')->assertSee('Ages 13–15');
+    }
+
+    public function test_public_purchase_cta_uses_the_current_admin_plan_title(): void
+    {
+        $package = PricingPackage::create([
+            'slug' => 'admin-cta-title-test',
+            'title' => 'Young',
+            'amount' => 20,
+            'currency' => 'usd',
+            'price_label' => '$20',
+            'button_text' => 'Choose Core',
+            'cta_mode' => 'purchase',
+            'type' => 'one_time',
+            'is_visible' => true,
+            'sort_order' => 0,
+        ]);
+
+        $this->get('/plans')
+            ->assertOk()
+            ->assertSee('Choose Young')
+            ->assertDontSee('Choose Core');
     }
 
     public function test_admin_price_change_reaches_customers_when_stripe_is_temporarily_unavailable(): void
@@ -287,6 +309,65 @@ class AdminCommercialWorkflowTest extends TestCase
         });
     }
 
+    public function test_agreement_shows_only_its_claimed_enterprise_code_users(): void
+    {
+        $admin = $this->admin('agreement-claims-admin@example.local');
+        $wpUserId = max(9_700_000, (int) User::max('wp_user_id') + 101);
+        $claimant = new User();
+        $claimant->wp_user_id = $wpUserId;
+        $claimant->username = 'agreement_claimant_'.$wpUserId;
+        $claimant->display_name = 'Claimed Member';
+        $claimant->email = 'agreement-claimant@example.local';
+        $claimant->password = bcrypt('safe-test-password');
+        $claimant->user_role = '2';
+        $claimant->status = 'active';
+        $claimant->save();
+        $wpUser = new WPUsers();
+        $wpUser->user_id = $wpUserId;
+        $wpUser->display_name = $claimant->display_name;
+        $wpUser->email = $claimant->email;
+        $wpUser->package = 'free';
+        $wpUser->save();
+
+        $organization = Organization::create([
+            'name' => 'Claims School',
+            'contact_name' => 'Claims Contact',
+            'contact_email' => 'agreement-claims@example.local',
+        ]);
+        $quote = OrganizationQuote::create([
+            'organization_id' => $organization->id,
+            'quote_number' => 'TEST-AGREEMENT-CLAIMS',
+            'package_slug' => 'decodemybrain-deep-dive',
+            'seat_count' => 2,
+            'unit_amount_minor' => 1000,
+            'total_amount_minor' => 2000,
+            'status' => 'paid',
+        ]);
+        OrganizationSeat::create([
+            'organization_quote_id' => $quote->id,
+            'package_slug' => $quote->package_slug,
+            'access_term' => 'permanent',
+            'status' => 'claimed',
+            'claimed_by_wp_user_id' => $wpUserId,
+            'claimed_at' => now()->subHour(),
+        ]);
+        OrganizationSeat::create([
+            'organization_quote_id' => $quote->id,
+            'package_slug' => $quote->package_slug,
+            'access_term' => 'permanent',
+            'status' => 'available',
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/admin/organization-quotes/'.$quote->id)
+            ->assertOk()
+            ->assertSee('Claimed assessments')
+            ->assertSee('1 of 2 assessments claimed')
+            ->assertSee('Claimed Member')
+            ->assertSee('agreement-claimant@example.local')
+            ->assertSee('Not started');
+    }
+
     public function test_payment_toggle_on_a_new_deal_activates_seats_and_the_enterprise_code_after_save(): void
     {
         $enquiry = OrganizationEnquiry::create([
@@ -441,6 +522,8 @@ class AdminCommercialWorkflowTest extends TestCase
             'organization-email-admin@example.local',
             'toggle-payment-admin@example.local',
             'code-rotation-admin@example.local',
+            'agreement-claims-admin@example.local',
+            'agreement-claimant@example.local',
         ])->delete();
     }
 }
