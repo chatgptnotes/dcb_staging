@@ -340,7 +340,32 @@ class VoucherAdminController extends Controller
 
     public function showQuote(int $id)
     {
-        return view('admin::organization_quotes.show', ['quote' => OrganizationQuote::with(['organization', 'seats'])->findOrFail($id)]);
+        $quote = OrganizationQuote::with('organization')
+            ->withCount(['seats as claimed_seats_count' => fn ($query) => $query->where('status', 'claimed')])
+            ->findOrFail($id);
+
+        $assessmentAttempts = DB::table('question_answers_main')
+            ->selectRaw('user_id, MAX(CASE WHEN status = ? THEN 1 ELSE 0 END) as has_completed, COUNT(*) as attempt_count', ['complete'])
+            ->groupBy('user_id');
+
+        $claimedSeats = OrganizationSeat::query()
+            ->from('organization_seats as seats')
+            ->leftJoin('wp_users', 'wp_users.user_id', '=', 'seats.claimed_by_wp_user_id')
+            ->leftJoin('users', 'users.wp_user_id', '=', 'seats.claimed_by_wp_user_id')
+            ->leftJoinSub($assessmentAttempts, 'assessment_attempts', 'assessment_attempts.user_id', '=', 'seats.claimed_by_wp_user_id')
+            ->where('seats.organization_quote_id', $quote->id)
+            ->where('seats.status', 'claimed')
+            ->orderByDesc('seats.claimed_at')
+            ->orderByDesc('seats.id')
+            ->get([
+                'seats.id',
+                'seats.claimed_at',
+                DB::raw("COALESCE(NULLIF(wp_users.display_name, ''), NULLIF(users.display_name, ''), 'Unknown user') as display_name"),
+                DB::raw("COALESCE(NULLIF(wp_users.email, ''), NULLIF(users.email, ''), '—') as email"),
+                DB::raw("CASE WHEN COALESCE(assessment_attempts.has_completed, 0) = 1 THEN 'Completed' WHEN COALESCE(assessment_attempts.attempt_count, 0) > 0 THEN 'In progress' ELSE 'Not started' END as assessment_status"),
+            ]);
+
+        return view('admin::organization_quotes.show', compact('quote', 'claimedSeats'));
     }
 
     public function markQuotePaid(int $id, OrganizationSeatService $seats, OrganizationCodeService $codes): RedirectResponse
