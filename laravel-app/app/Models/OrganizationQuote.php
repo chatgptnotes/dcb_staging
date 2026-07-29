@@ -19,6 +19,8 @@ class OrganizationQuote extends Model
         'expires_at' => 'datetime',
         'access_ends_at' => 'datetime',
         'paid_at' => 'datetime',
+        'shared_code_created_at' => 'datetime',
+        'shared_code_rotated_at' => 'datetime',
         'shared_code_enabled' => 'boolean',
     ];
 

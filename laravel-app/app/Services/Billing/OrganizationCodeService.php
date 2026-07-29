@@ -34,16 +34,21 @@ final class OrganizationCodeService
         if ($quote->status !== 'paid') {
             throw new RuntimeException('Record payment before creating a shared organisation code.');
         }
+        $isFirstGeneration = ! $quote->shared_code_hash;
         do {
             $code = 'DMB-ORG-'.strtoupper(Str::random(8));
         } while (OrganizationQuote::where('shared_code_hash', $this->hash($code))->exists());
 
-        $quote->update([
+        $attributes = [
             'shared_code_hash' => $this->hash($code),
             'shared_code_encrypted' => Crypt::encryptString($code),
             'shared_code_hint' => substr($code, 0, 7).'•••'.substr($code, -3),
             'shared_code_enabled' => true,
-        ]);
+        ];
+        if ($isFirstGeneration) {
+            $attributes['shared_code_created_at'] = now();
+        }
+        $quote->update($attributes);
         return $code;
     }
 
@@ -58,7 +63,10 @@ final class OrganizationCodeService
             throw new RuntimeException('Generate an enterprise code before rotating it.');
         }
 
-        return $this->createOrReplace($quote);
+        $code = $this->createOrReplace($quote);
+        $quote->update(['shared_code_rotated_at' => now()]);
+
+        return $code;
     }
 
     public function disable(OrganizationQuote $quote): void

@@ -55,7 +55,8 @@ class NativeRegistrationTest extends TestCase
             'user_name' => self::USERNAME,
             'dob' => '01/01/2000',
             'email' => self::EMAIL,
-            'phone' => '+44 7700 000000',
+            'country' => 'AE',
+            'phone' => '1234567',
             'password' => 'Secret#2026',
             'password_confirmation' => 'Secret#2026',
         ], $overrides);
@@ -84,7 +85,8 @@ class NativeRegistrationTest extends TestCase
         $this->assertGreaterThanOrEqual(1000000, (int) $user->wp_user_id);
         $this->assertTrue(Hash::check('Secret#2026', $user->password));
         $this->assertSame('Native Tester', $user->display_name);
-        $this->assertSame('+44 7700 000000', $user->billing_phone);
+        $this->assertSame('+9711234567', $user->billing_phone);
+        $this->assertSame('AE', $user->billing_country);
 
         // wp_users mirror with the free package.
         $mirror = WPUsers::where('user_id', $user->wp_user_id)->first();
@@ -231,6 +233,40 @@ class NativeRegistrationTest extends TestCase
         $response = $this->post('/sign-up', $this->validPayload(['password_confirmation' => 'Different#2026']));
         $response->assertSessionHasErrors('password');
         $this->assertNull(User::where('email', self::EMAIL)->first());
+    }
+
+    /** @dataProvider supportedPhoneNumbers */
+    public function test_supported_country_phone_numbers_are_normalized(string $country, string $phone, string $expected): void
+    {
+        $response = $this->post('/sign-up', $this->validPayload([
+            'country' => $country,
+            'phone' => $phone,
+        ]));
+
+        $response->assertRedirect('intro');
+        $this->assertSame($expected, User::where('email', self::EMAIL)->value('billing_phone'));
+        $this->assertSame($country, User::where('email', self::EMAIL)->value('billing_country'));
+    }
+
+    public static function supportedPhoneNumbers(): array
+    {
+        return [
+            'Dubai/UAE' => ['AE', '1234567', '+9711234567'],
+            'India' => ['IN', '9876543210', '+919876543210'],
+            'USA' => ['US', '4155550123', '+14155550123'],
+        ];
+    }
+
+    public function test_phone_country_and_digits_are_required_and_length_checked(): void
+    {
+        $this->post('/sign-up', $this->validPayload(['country' => '', 'phone' => '1234567']))
+            ->assertSessionHasErrors('country');
+
+        $this->post('/sign-up', $this->validPayload(['country' => 'IN', 'phone' => '123456789']))
+            ->assertSessionHasErrors('phone');
+
+        $this->post('/sign-up', $this->validPayload(['country' => 'US', 'phone' => '415-555-0123']))
+            ->assertSessionHasErrors('phone');
     }
 
     public function test_new_user_can_log_in_natively_after_signup(): void

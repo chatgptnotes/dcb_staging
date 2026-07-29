@@ -138,6 +138,33 @@
     }, true);
   }());
 </script>
+<style>
+  .admin-password-control { position: relative; }
+  .admin-password-control input { padding-right: 62px; }
+  .admin-password-toggle { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); border: 0; background: transparent; color: #696cff; cursor: pointer; font-size: 13px; font-weight: 600; padding: 8px; }
+</style>
+<script>
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    if (input.closest('.admin-password-control')) return;
+
+    var wrapper = document.createElement('div');
+    var button = document.createElement('button');
+    wrapper.className = 'admin-password-control';
+    input.parentNode.insertBefore(wrapper, input);
+    wrapper.appendChild(input);
+    button.type = 'button';
+    button.className = 'admin-password-toggle';
+    button.textContent = 'Show';
+    button.setAttribute('aria-label', 'Show password');
+    button.addEventListener('click', function () {
+      var visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      button.textContent = visible ? 'Show' : 'Hide';
+      button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+    });
+    wrapper.appendChild(button);
+  });
+</script>
   </body>
 
 </html>

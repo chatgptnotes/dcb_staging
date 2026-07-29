@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use File;
 use Mail;
 use PDF;
@@ -40,6 +42,12 @@ use App\Http\Controllers\BrainResultsController;
 
 class UserController extends Controller
 {
+    private const REGISTRATION_PHONE_COUNTRIES = [
+        'AE' => ['dial_code' => '+971', 'length' => 7, 'label' => 'Dubai / UAE'],
+        'IN' => ['dial_code' => '+91', 'length' => 10, 'label' => 'India'],
+        'US' => ['dial_code' => '+1', 'length' => 10, 'label' => 'USA'],
+    ];
+
 //     public function sign_in(Request $request) {
 
 //     if ($request->isMethod('get')) {
@@ -586,6 +594,7 @@ public function sign_up(Request $request) {
             'password_confirmation' => 'required',
             'password' => 'required|confirmed|min:6',
         ]);
+        $phoneData = $this->validateRegistrationPhone($request);
 
         $dateOfBirth = \Carbon\Carbon::createFromFormat('!d/m/Y', (string) $request->dob);
         if (! $dateOfBirth->lt(today())) {
@@ -607,6 +616,8 @@ public function sign_up(Request $request) {
             'email' => $request->email,
             'display_name' => $request->first_name . ' ' . $request->last_name,
             'date_of_birth' => $dateOfBirth->format('Y-m-d'),
+            'billing_phone' => $phoneData['full_phone'],
+            'billing_country' => $phoneData['country'],
             'password' => $request->password,
         ];
 
@@ -721,10 +732,10 @@ private function signUpNative(Request $request)
         'user_name'  => 'required|string|max:60',
         'dob'        => 'required|date_format:d/m/Y',
         'email'      => 'required|email|max:191',
-        'phone'      => 'nullable|string|max:32',
         'password_confirmation' => 'required',
         'password'   => 'required|confirmed|min:6',
     ]);
+    $phoneData = $this->validateRegistrationPhone($request);
 
     // Throttle signups per IP. Count EVERY attempt (not just failures) so a
     // script of valid, unique signups can't mass-create accounts from one IP.
@@ -773,7 +784,8 @@ private function signUpNative(Request $request)
         'email' => $email,
         'display_name' => trim($request->first_name.' '.$request->last_name),
         'date_of_birth' => $dateOfBirth->format('Y-m-d'),
-        'billing_phone' => trim((string) $request->phone),
+        'billing_phone' => $phoneData['full_phone'],
+        'billing_country' => $phoneData['country'],
         'password_hash' => Hash::make($request->password),
     ];
 
@@ -791,6 +803,30 @@ private function signUpNative(Request $request)
     }
 
     return $this->createNativeUserFromData($data, $request);
+}
+
+/** Validate and normalize the country-specific registration mobile number. */
+private function validateRegistrationPhone(Request $request): array
+{
+    $data = $request->validate([
+        'country' => ['required', 'string', Rule::in(array_keys(self::REGISTRATION_PHONE_COUNTRIES))],
+        'phone' => ['required', 'string', 'regex:/^\d+$/'],
+    ]);
+
+    $country = $data['country'];
+    $rule = self::REGISTRATION_PHONE_COUNTRIES[$country];
+    $phone = $data['phone'];
+
+    if (strlen($phone) !== $rule['length']) {
+        throw ValidationException::withMessages([
+            'phone' => "Enter exactly {$rule['length']} digits for {$rule['label']}, without {$rule['dial_code']}.",
+        ]);
+    }
+
+    return [
+        'country' => $country,
+        'full_phone' => $rule['dial_code'].$phone,
+    ];
 }
 
 private function rememberIntendedPackage(Request $request): void
@@ -865,6 +901,7 @@ private function createNativeUserFromData(array $data, Request $request)
                 $u->display_name = $data['display_name'];
                 $u->date_of_birth = $data['date_of_birth'];
                 $u->billing_phone = $data['billing_phone'] ?: null;
+                $u->billing_country = $data['billing_country'] ?: null;
                 $u->password = $data['password_hash'];
                 $u->user_role = '2';
                 $u->status = 'active';

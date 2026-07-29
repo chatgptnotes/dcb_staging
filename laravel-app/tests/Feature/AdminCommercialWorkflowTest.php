@@ -437,6 +437,8 @@ class AdminCommercialWorkflowTest extends TestCase
         $codes = app(OrganizationCodeService::class);
         $oldCode = $codes->createOrReplace($quote);
         $oldHash = $quote->fresh()->shared_code_hash;
+        $createdAt = $quote->fresh()->shared_code_created_at;
+        $this->assertNotNull($createdAt);
 
         $this->actingAs($this->admin('code-rotation-admin@example.local'))
             ->post('/admin/organization-quotes/'.$quote->id.'/shared-code/rotate')
@@ -448,6 +450,8 @@ class AdminCommercialWorkflowTest extends TestCase
         $newCode = Crypt::decryptString($quote->shared_code_encrypted);
         $this->assertNotSame($oldHash, $quote->shared_code_hash);
         $this->assertNotSame($oldCode, $newCode);
+        $this->assertTrue($createdAt->equalTo($quote->shared_code_created_at));
+        $this->assertNotNull($quote->shared_code_rotated_at);
         $this->assertSame(1, $quote->seats()->where('status', 'claimed')->count());
         $this->assertSame(1, $quote->seats()->where('status', 'available')->count());
 

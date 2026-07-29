@@ -28,7 +28,7 @@
     </div>
     <table class="data-table">
       <thead>
-        <tr><th>ENTITY</th><th>CODE</th><th>REGISTERED</th><th>COMPLETED</th><th>REMAINING</th><th>STATE</th><th></th></tr>
+        <tr><th>ENTITY</th><th>CODE</th><th>CREATED AT</th><th>LAST ROTATED</th><th>REGISTERED</th><th>COMPLETED</th><th>REMAINING</th><th>STATE</th><th></th></tr>
       </thead>
       <tbody>
         @forelse($quotes as $quote)
@@ -39,6 +39,8 @@
               <div class="secondary">{{ $quote->seat_count }} issued · {{ ($quote->paid_at ?? $quote->created_at)->timezone(config('app.timezone'))->format('d M Y') }}</div>
             </td>
             <td>{{ $quote->shared_code_hint ?: 'Not generated' }}</td>
+            <td>{{ $quote->shared_code_created_at?->timezone(config('app.timezone'))->format('d M Y H:i') ?? '—' }}</td>
+            <td>{{ $quote->shared_code_rotated_at?->timezone(config('app.timezone'))->format('d M Y H:i') ?? '—' }}</td>
             <td>{{ $quote->registered_count }}</td>
             <td>{{ $quote->completed_count }}</td>
             <td>{{ $quote->remaining_count }}</td>
@@ -90,7 +92,7 @@
             </td>
           </tr>
         @empty
-          <tr><td colspan="7" class="empty">No agreements have been saved yet.</td></tr>
+          <tr><td colspan="9" class="empty">No agreements have been saved yet.</td></tr>
         @endforelse
       </tbody>
     </table>
