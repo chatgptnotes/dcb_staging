@@ -192,7 +192,7 @@ class VoucherAdminController extends Controller
 
         return response()->streamDownload(function () use ($quotes): void {
             $output = fopen('php://output', 'wb');
-            fputcsv($output, ['Entity', 'Masked code', 'Issued', 'Registered', 'Completed', 'Remaining', 'State', 'Issued at']);
+            fputcsv($output, ['Entity', 'Masked code', 'Issued', 'Registered', 'Completed', 'Remaining', 'State', 'Code created at', 'Last rotated at']);
             foreach ($quotes as $quote) {
                 fputcsv($output, [
                     $quote->organization->name,
@@ -202,7 +202,8 @@ class VoucherAdminController extends Controller
                     $quote->completed_count,
                     $quote->remaining_count,
                     $quote->shared_code_enabled ? 'Enabled' : 'Disabled',
-                    ($quote->paid_at ?? $quote->created_at)->timezone(config('app.timezone'))->format('Y-m-d H:i:s T'),
+                    $quote->shared_code_created_at?->timezone(config('app.timezone'))->format('Y-m-d H:i:s T') ?? '',
+                    $quote->shared_code_rotated_at?->timezone(config('app.timezone'))->format('Y-m-d H:i:s T') ?? '',
                 ]);
             }
             fclose($output);

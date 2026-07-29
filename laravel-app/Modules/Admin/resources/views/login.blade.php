@@ -117,6 +117,10 @@
         input:focus { border-color: var(--yellow-dark); box-shadow: 0 0 0 4px rgba(255, 218, 77, .28); }
         input[aria-invalid="true"] { border-color: #d46039; }
 
+        .password-control { position: relative; }
+        .password-control input { padding-right: 64px; }
+        .password-toggle { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); border: 0; background: transparent; color: #8b6200; cursor: pointer; font: inherit; font-size: .85rem; font-weight: 700; padding: 8px; }
+
         .field-error {
             display: block;
             margin-top: 7px;
@@ -165,7 +169,7 @@
             </a>
 
             <h1 id="login-heading">Welcome back</h1>
-            <p class="intro">Sign in to access the DecodeMyBrain administration dashboard.</p>
+            <p class="intro">Log in to access the DecodeMyBrain administration dashboard.</p>
 
             @if(Session::has('success'))
                 <div class="notice notice--success" role="status">{{ Session::get('success') }}</div>
@@ -186,17 +190,31 @@
 
                 <div class="field">
                     <label for="password">Password</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" aria-describedby="password-error">
+                    <div class="password-control">
+                        <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" aria-describedby="password-error">
+                        <button class="password-toggle" type="button" aria-label="Show password">Show</button>
+                    </div>
                     @if($errors->has('password'))
                         <span id="password-error" class="field-error">{{ $errors->first('password') }}</span>
                     @endif
                 </div>
 
-                <button class="submit" type="submit">Sign in</button>
+                <button class="submit" type="submit">Log in</button>
             </form>
 
             <p class="security-note">Restricted access for authorised administrators only.</p>
         </section>
     </main>
+    <script>
+        document.querySelectorAll('.password-toggle').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var input = button.parentElement.querySelector('input');
+                var visible = input.type === 'text';
+                input.type = visible ? 'password' : 'text';
+                button.textContent = visible ? 'Show' : 'Hide';
+                button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
+            });
+        });
+    </script>
 </body>
 </html>

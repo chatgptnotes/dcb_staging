@@ -46,7 +46,7 @@ use App\Models\AdminDetails;
             </div>
             <div class="col-md-4 mb-3">
                 <label for="defaultFormControlInput" class="form-label">Confirm Password</label>
-                <input type="password_confirmation" class="form-control" id="defaultFormControlInput" name="password_confirmation" />
+                <input type="password" class="form-control" id="defaultFormControlInput" name="password_confirmation" />
                 @if($errors->has("password_confirmation")) <div class="alert alert-danger mt-2">{{ $errors->first('password_confirmation') }}</li></div>@endif
             </div>
             <div class="col-md-12">

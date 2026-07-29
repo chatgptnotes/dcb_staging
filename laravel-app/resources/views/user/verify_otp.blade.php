@@ -65,6 +65,10 @@ body {
     background-color: #F1935D; /* Yellow underline */
 }
 
+.password-control { position: relative; }
+.password-control .form-control { padding-right: 62px; }
+.password-toggle { position: absolute; top: 50%; right: 7px; transform: translateY(-50%); border: 0; background: transparent; color: #F1935D; font-weight: 600; cursor: pointer; }
+
 @media (max-width: 768px) {
 
     .left-panel,
@@ -193,23 +197,23 @@ body {
                     </div>
                     <div class="col-lg-6 px-0 ps-lg-0 pe-lg-1">
                         <label for="first-name" class="pb-2 form-label-signup" style="font-weight: 600">New Password</label>
-                        <input type="password" class="form-control signup-form-placeholder" id="first-name"
+                        <div class="password-control"><input type="password" class="form-control signup-form-placeholder" id="first-name"
                             placeholder="New Password" required
-                            style="border-radius:10px; border-color:rgb(233, 232, 232);"  name="password">
+                            style="border-radius:10px; border-color:rgb(233, 232, 232);"  name="password"><button type="button" class="password-toggle" aria-label="Show password">Show</button></div>
                             @if($errors->has("password")) <p style="color:red;font-size:14px;">{{ $errors->first('password') }}</p>@endif
                     </div>
                     <div class="col-lg-6 px-0 ps-lg-0 pe-lg-1">
                         <label for="first-name" class="pb-2 form-label-signup" style="font-weight: 600">Confirm Password</label>
-                        <input type="password" class="form-control signup-form-placeholder" id="first-name"
+                        <div class="password-control"><input type="password" class="form-control signup-form-placeholder" id="first-name"
                             placeholder="New Password" required
-                            style="border-radius:10px; border-color:rgb(233, 232, 232);"  name="password_confirmation">
+                            style="border-radius:10px; border-color:rgb(233, 232, 232);"  name="password_confirmation"><button type="button" class="password-toggle" aria-label="Show password">Show</button></div>
                             @if($errors->has("password_confirmation")) <p style="color:red;font-size:14px;">{{ $errors->first('password_confirmation') }}</p>@endif
                     </div>
                   
                 </div>
                 <div class="row px-0 mx-0  mt-3 mb-2">
                     <div class="col-12">
-                        <h3 class="small-link text-purple text-start"  style="font-weight: 600">Back to sign in ? <a href="{{url('sign-in')}}" style="color:#F1935D;">Sign In</a></h3>
+                        <h3 class="small-link text-purple text-start"  style="font-weight: 600">Back to log in? <a href="{{url('sign-in')}}" style="color:#F1935D;">Log in</a></h3>
                     </div>
                    
                 </div>
@@ -220,3 +224,4 @@ body {
     </div>
 </div>
 @include('layouts.footer')
+<script>document.querySelectorAll('.password-toggle').forEach(function(button){button.addEventListener('click',function(){var input=button.parentElement.querySelector('input'),visible=input.type==='text';input.type=visible?'password':'text';button.textContent=visible?'Show':'Hide';button.setAttribute('aria-label',visible?'Show password':'Hide password')})});</script>
