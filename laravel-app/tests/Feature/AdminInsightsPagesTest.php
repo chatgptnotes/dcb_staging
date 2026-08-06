@@ -44,7 +44,8 @@ class AdminInsightsPagesTest extends TestCase
         $this->actingAs($this->admin)->get('/admin/users')
             ->assertOk()->assertSee('Search name or email')->assertSee('Export CSV');
         $this->actingAs($this->admin)->get('/admin/payments')
-            ->assertOk()->assertSee('Collected this period')->assertSee('TRANSACTION');
+            ->assertOk()->assertSee('Receipts till')->assertSee('TRANSACTION ID')
+            ->assertSee('Search customer, email or phone')->assertSee('PAYMENT DATE &amp; TIME', false);
     }
 
     public function test_insight_pages_require_an_admin_session(): void

@@ -107,14 +107,26 @@ class AdminController extends Controller
             }, 'decodemybrain-users.csv', ['Content-Type' => 'text/csv']);
         }
 
-        return view('admin::users', compact('rows', 'search', 'filter'));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 20;
+        $users = new \Illuminate\Pagination\LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('admin::users', compact('users', 'search', 'filter'));
     }
 
     public function payments(Request $request, AdminInsightsService $insights)
     {
         $range = (string) $request->query('range', '30d');
+        $search = trim((string) $request->query('search', ''));
+        $plan = trim((string) $request->query('plan', ''));
         [$start, $end] = $insights->range($range);
-        $rows = $insights->payments($start, $end);
+        $rows = $insights->payments($start, $end, $search, $plan);
         $summary = [
             'collected_minor' => $rows->where('status', 'Paid')->sum('amount_minor'),
             'collected_count' => $rows->where('status', 'Paid')->count(),
@@ -122,19 +134,37 @@ class AdminController extends Controller
             'refunded_count' => $rows->where('status', 'Refunded')->count(),
             'failed_count' => $rows->where('status', 'Failed')->count(),
         ];
+        $serials = [];
+        $nextSerial = 1;
+        $rows->each(function ($row) use (&$serials, &$nextSerial) {
+            $customerKey = mb_strtolower(trim((string) ($row->email ?: $row->phone ?: $row->display_name ?: $row->transaction_id)));
+            $row->sl_no = $serials[$customerKey] ??= $nextSerial++;
+        });
 
         if ($request->boolean('export')) {
             return response()->streamDownload(function () use ($rows) {
                 $out = fopen('php://output', 'w');
-                fputcsv($out, ['Transaction', 'Customer', 'Email', 'Plan', 'Coupon', 'Amount', 'Currency', 'Status', 'Date']);
+                fputcsv($out, ['Sl#', 'Customer', 'Email', 'Phone', 'Plan', 'Coupon', 'Amount', 'Transaction ID', 'Status', 'Payment Date & Time']);
                 foreach ($rows as $row) {
-                    fputcsv($out, [$row->transaction_id, $row->display_name, $row->email, $row->package, $row->coupon, number_format($row->amount_minor / 100, 2, '.', ''), strtoupper($row->currency), $row->status, $row->created_at]);
+                    fputcsv($out, [$row->sl_no ?? '', $row->display_name, $row->email, $row->phone, $row->package, $row->coupon, number_format($row->amount_minor / 100, 2, '.', ''), $row->transaction_id, $row->status, $row->status === 'Paid' ? $row->created_at : '']);
                 }
                 fclose($out);
             }, 'decodemybrain-payments.csv', ['Content-Type' => 'text/csv']);
         }
 
-        return view('admin::payments', compact('range', 'rows', 'summary'));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 20;
+        $payments = new \Illuminate\Pagination\LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+        $plans = PricingPackage::orderBy('title')->get(['slug', 'title']);
+        $receiptsTill = $end->format('d M Y');
+
+        return view('admin::payments', compact('range', 'search', 'plan', 'plans', 'payments', 'summary', 'receiptsTill'));
     }
     public function add_admin(Request $request)
     { if($request->isMethod('get')){

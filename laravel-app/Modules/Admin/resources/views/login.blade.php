@@ -118,8 +118,8 @@
         input[aria-invalid="true"] { border-color: #d46039; }
 
         .password-control { position: relative; }
-        .password-control input { padding-right: 64px; }
-        .password-toggle { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); border: 0; background: transparent; color: #8b6200; cursor: pointer; font: inherit; font-size: .85rem; font-weight: 700; padding: 8px; }
+        .password-control input { padding-right: 54px; }
+        .password-toggle { display:grid; place-items:center; position: absolute; top: 50%; right: 8px; width:36px; height:36px; transform: translateY(-50%); border: 0; background: transparent; color: #8b6200; cursor: pointer; padding: 8px; }
 
         .field-error {
             display: block;
@@ -192,7 +192,7 @@
                     <label for="password">Password</label>
                     <div class="password-control">
                         <input id="password" name="password" type="password" autocomplete="current-password" required aria-invalid="{{ $errors->has('password') ? 'true' : 'false' }}" aria-describedby="password-error">
-                        <button class="password-toggle" type="button" aria-label="Show password">Show</button>
+                        <button class="password-toggle" type="button" aria-label="Show password"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
                     </div>
                     @if($errors->has('password'))
                         <span id="password-error" class="field-error">{{ $errors->first('password') }}</span>
@@ -211,7 +211,9 @@
                 var input = button.parentElement.querySelector('input');
                 var visible = input.type === 'text';
                 input.type = visible ? 'password' : 'text';
-                button.textContent = visible ? 'Show' : 'Hide';
+                button.innerHTML = visible
+                    ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>'
+                    : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.4 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a18.7 18.7 0 0 1-3.1 3.7"/><path d="M6.2 6.2C3.6 8 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3-.4"/></svg>';
                 button.setAttribute('aria-label', visible ? 'Show password' : 'Hide password');
             });
         });
