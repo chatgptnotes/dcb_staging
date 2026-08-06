@@ -166,7 +166,8 @@ class StripeWebhookEntitlementTest extends TestCase
         $this->assertNotNull($payment);
         $this->assertSame('WH Test', $payment->display_name);
         $this->assertSame('wh-test@example.local', $payment->email);
-        $this->assertSame('decodemybrain-guided-friend-and-family-connect', $payment->package);
+        $this->assertSame('Guided F&F', $payment->package);
+        $this->assertSame('decodemybrain-guided-friend-and-family-connect', $payment->plan_slug);
     }
 
     public function test_unpaid_checkout_session_does_not_grant(): void

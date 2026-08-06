@@ -83,7 +83,7 @@ class AdminInsightsService
         });
     }
 
-    public function payments(?Carbon $start, Carbon $end): Collection
+    public function payments(?Carbon $start, Carbon $end, string $search = '', string $plan = ''): Collection
     {
         $stored = Schema::hasTable('payment_records')
             ? DB::table('payment_records')
@@ -95,6 +95,7 @@ class AdminInsightsService
                     'payment_records.*',
                     DB::raw('COALESCE(NULLIF(wp_users.display_name, ""), users.display_name) as local_display_name'),
                     DB::raw('COALESCE(NULLIF(wp_users.email, ""), users.email) as local_email'),
+                    'users.billing_phone as local_phone',
                 ])
             : collect();
         $storedByIntent = $stored->filter(fn ($row) => ! empty($row->stripe_payment_intent_id))
@@ -115,6 +116,7 @@ class AdminInsightsService
                 'vouchers.code_hint',
                 DB::raw('COALESCE(NULLIF(wp_users.display_name, ""), users.display_name) as display_name'),
                 DB::raw('COALESCE(NULLIF(wp_users.email, ""), users.email) as email'),
+                'users.billing_phone as phone',
             ]);
         $vouchersByIntent = $voucherRows->filter(fn ($row) => ! empty($row->stripe_payment_intent_id))
             ->keyBy('stripe_payment_intent_id');
@@ -164,6 +166,7 @@ class AdminInsightsService
                             $user?->email,
                             $stripeCustomer['email']
                         ),
+                        'phone' => $this->firstPresent($storedRow?->local_phone, $user?->billing_phone, $stripeCustomer['phone']),
                         'package' => $storedRow?->package_slug ?? $voucherRow?->package_slug ?? ($metadata['package'] ?? '—'),
                         'coupon' => $storedRow?->coupon_code ?? $voucherRow?->code_hint ?? '—',
                         'amount_minor' => $status === 'Refunded' && $charge ? (int) ($charge->amount_refunded ?? $intent->amount_received) : (int) ($intent->amount_received ?: $intent->amount),
@@ -185,6 +188,7 @@ class AdminInsightsService
                 'transaction_id' => $row->stripe_payment_intent_id ?: ($row->stripe_subscription_id ?: $row->checkout_session_id),
                 'display_name' => $this->firstPresent($row->local_display_name, $row->customer_name, 'Customer'),
                 'email' => $this->firstPresent($row->local_email, $row->customer_email),
+                'phone' => $row->local_phone,
                 'package' => $row->package_slug ?: '—',
                 'coupon' => $row->coupon_code ?: '—',
                 'amount_minor' => (int) ($row->amount_total_minor ?? $row->amount_subtotal_minor ?? 0),
@@ -203,6 +207,7 @@ class AdminInsightsService
                 'transaction_id' => $row->stripe_payment_intent_id ?: 'Recorded locally',
                 'display_name' => $row->display_name ?: 'Customer',
                 'email' => $row->email,
+                'phone' => $row->phone,
                 'package' => $row->package_slug ?: '—',
                 'coupon' => $row->code_hint ?: '—',
                 'amount_minor' => (int) $row->final_amount_minor,
@@ -212,16 +217,32 @@ class AdminInsightsService
             ]);
         }
 
-        return $rows->sortByDesc('created_at')->values();
+        $planTitles = DB::table('pricing_packages')->pluck('title', 'slug');
+
+        return $rows->map(function ($row) use ($planTitles) {
+            $row->plan_slug = $row->package;
+            $row->package = $row->plan_slug === '—'
+                ? '—'
+                : ($planTitles->get($row->plan_slug) ?: str($row->plan_slug)->headline());
+            return $row;
+        })->when($plan !== '', fn (Collection $rows) => $rows->where('plan_slug', $plan))
+            ->when($search !== '', function (Collection $rows) use ($search) {
+                $needle = mb_strtolower($search);
+                return $rows->filter(function ($row) use ($needle) {
+                    return str_contains(mb_strtolower(implode(' ', [
+                        $row->display_name ?? '', $row->email ?? '', $row->phone ?? '',
+                    ])), $needle);
+                });
+            })->sortByDesc('created_at')->values();
     }
 
     private function customer(int $wpUserId): ?object
     {
-        return DB::table('users')->where('wp_user_id', $wpUserId)->first(['display_name', 'email'])
+        return DB::table('users')->where('wp_user_id', $wpUserId)->first(['display_name', 'email', 'billing_phone'])
             ?: DB::table('wp_users')->where('user_id', $wpUserId)->first(['display_name', 'email']);
     }
 
-    /** @return array{name: ?string, email: ?string} */
+    /** @return array{name: ?string, email: ?string, phone: ?string} */
     private function stripeCustomer(object $intent, ?object $charge): array
     {
         $customer = $intent->customer ?? null;
@@ -230,6 +251,7 @@ class AdminInsightsService
         return [
             'name' => $this->objectValue($customer, 'name') ?: $this->objectValue($billing, 'name'),
             'email' => $this->objectValue($customer, 'email') ?: $this->objectValue($billing, 'email'),
+            'phone' => $this->objectValue($customer, 'phone') ?: $this->objectValue($billing, 'phone'),
         ];
     }
 
