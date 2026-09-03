@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QA Test Completion Report — Decode My Brain</title>
+  <style>
+    @page { size: A4; margin: 15mm 14mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #17212b; font: 10.2pt/1.38 Arial, Helvetica, sans-serif; }
+    h1, h2 { font-family: Georgia, 'Times New Roman', serif; color: #102a43; }
+    h1 { margin: 0; font-size: 26pt; line-height: 1.1; }
+    h2 { margin: 18px 0 7px; padding-bottom: 4px; border-bottom: 1px solid #cbd5e1; font-size: 14pt; }
+    p { margin: 6px 0; }
+    .cover { padding: 5px 0 13px; border-bottom: 4px solid #0f766e; }
+    .eyebrow { margin: 0 0 5px; color: #0f766e; font-size: 9pt; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; }
+    .subtitle { margin-top: 6px; color: #52606d; font-size: 12pt; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 28px; margin-top: 14px; font-size: 9.3pt; }
+    .meta b { color: #334e68; }
+    .decision { margin: 13px 0 10px; padding: 9px 12px; border-left: 4px solid #b42318; background: #fff4f2; color: #7a271a; font-weight: 700; }
+    table { width: 100%; margin: 8px 0; border-collapse: collapse; font-size: 8.7pt; }
+    th { background: #e6fffb; color: #134e4a; font-weight: 700; text-align: left; }
+    th, td { padding: 6px 7px; border: 1px solid #cbd5e1; vertical-align: top; }
+    .metrics td:first-child, .findings td:first-child { font-weight: 700; }
+    .findings td:nth-child(2) { white-space: nowrap; font-weight: 700; }
+    .high { color: #b42318; }
+    .medium { color: #b54708; }
+    .low { color: #475467; }
+    ul { margin: 6px 0 6px 19px; padding: 0; }
+    li { margin: 3px 0; }
+    .note { color: #52606d; font-size: 8.7pt; }
+    .references { color: #52606d; font-size: 8.4pt; }
+    a { color: #0f766e; text-decoration: none; }
+    .inventory { columns: 4; column-gap: 13px; font-size: 6.7pt; line-height: 1.22; }
+    .inventory section { break-inside: avoid; margin: 0 0 8px; }
+    .inventory h3 { margin: 0 0 3px; color: #134e4a; font: 700 7.3pt Arial, Helvetica, sans-serif; }
+    .inventory ul { margin: 0 0 0 10px; }
+    .inventory li { margin: 1px 0; }
+  </style>
+</head>
+<body>
+  <header class="cover">
+    <p class="eyebrow">Quality Assurance · Test Completion Report</p>
+    <h1>Decode My Brain</h1>
+    <p class="subtitle">QA Regression Baseline</p>
+    <div class="meta">
+      <div><b>Test cycle:</b> QA regression baseline</div>
+      <div><b>Execution date:</b> 17 August 2026</div>
+      <div><b>Environment:</b> PHP 8.3.32 · MySQL 8.0.33 / DBngin</div>
+      <div><b>Database:</b> Local <code>decodemy_app</code></div>
+    </div>
+  </header>
+
+  <div class="decision">RELEASE DECISION: NO-GO — unrelated remediation and full retest still required</div>
+
+  <h2>1. Executive summary</h2>
+  <p>QA completed the automated backend regression run against the approved local DBngin database. The suite executed fully: <b>100 of 106 tests passed (94.3%)</b>, with <b>397 assertions</b> in 6.58 seconds. PHP syntax validation passed for all 183 PHP application, module, route, and test files; Laravel successfully registered 194 routes.</p>
+  <h3>Targeted remediation retest — 3 September 2026</h3>
+  <p>QA-001 is <b>fixed</b>: legacy pending signup sessions now safely handle missing billing country/phone values, and its dedicated regression test passes. The targeted native-registration and OTP suites also pass: <b>25 tests / 107 assertions</b>.</p>
+  <p>The three OTP fixtures cited by QA-002 now include required country and phone data; the organisation-code fixture remains open. This was a targeted retest only, so the 17 August full-suite totals below remain historical baseline evidence. QA-003 through QA-005 remain open, including the frontend-build blocker.</p>
+  <p>The frontend production build could not be verified: a clean locked dependency install still left Vite unavailable, and <code>npm run build</code> failed with <code>vite: command not found</code>. This is a reproducibility blocker, not a proven source-code defect.</p>
+
+  <h2>2. Scope and evidence</h2>
+  <p>Testing prioritized account creation and OTP, paid access and eligibility, vouchers/organisation codes, checkout/webhook entitlement, assessment continuation, and administrative commercial operations.</p>
+  <table>
+    <thead><tr><th>Check</th><th>Result</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Laravel regression suite</td><td class="high">Fail</td><td>100 pass / 6 fail / 397 assertions</td></tr>
+      <tr><td>PHP syntax validation</td><td>Pass</td><td>183 files; 0 syntax errors</td></tr>
+      <tr><td>Laravel route discovery</td><td>Pass</td><td>194 routes registered</td></tr>
+      <tr><td>Vite production build</td><td class="high">Blocked</td><td><code>vite: command not found</code></td></tr>
+      <tr><td>Targeted registration + OTP retest (3 Sep)</td><td>Pass</td><td>25 pass / 107 assertions</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Not covered: manual responsive/cross-browser testing, accessibility, performance/load, penetration testing, and live Stripe/email delivery.</p>
+
+  <h2>3. Results</h2>
+  <p>Passing suites include password-hash compatibility, OTP service rules, package catalogue, Stripe price management, voucher normalization, admin commercial workflow, assessment resume, native login/registration, payment gates, permanent vouchers, age eligibility, public access choice, and webhook entitlement handling.</p>
+  <table class="metrics"><tbody>
+    <tr><td>Tests discovered and executed</td><td>106</td><td>Passed</td><td>100</td></tr>
+    <tr><td>Failed</td><td>6</td><td>Pass rate</td><td>94.3%</td></tr>
+    <tr><td>Assertions</td><td>397</td><td>Duration</td><td>6.58 seconds</td></tr>
+  </tbody></table>
+
+  <h2>4. Findings and residual risk</h2>
+  <table class="findings">
+    <thead><tr><th>ID</th><th>Severity</th><th>Finding</th><th>Required action</th></tr></thead>
+    <tbody>
+      <tr><td>QA-001</td><td>Fixed</td><td>Legacy OTP signup completion now treats missing billing country/phone values as null instead of throwing HTTP 500. Dedicated regression test passes.</td><td>Include in the next full regression run.</td></tr>
+      <tr><td>QA-002</td><td class="medium">Medium — partially fixed</td><td>The three OTP/registration fixtures now include required country and phone fields. The organisation-code age fixture remains out of date.</td><td>Update the remaining organisation-code fixture; retain explicit validation tests separately.</td></tr>
+      <tr><td>QA-003</td><td class="medium">Medium</td><td>Public-plan test uses a session user without a stored DOB, so eligible checkout behaviour is unverified.</td><td>Add eligible and ineligible customer fixtures.</td></tr>
+      <tr><td>QA-004</td><td class="low">Low</td><td>Admin dashboard test expects individual customer/voucher detail while the dashboard renders aggregate metrics.</td><td>Confirm requirement; update test or UI accordingly.</td></tr>
+      <tr><td>QA-005</td><td class="high">High</td><td>Locked frontend build cannot execute because Vite has no executable after a clean install.</td><td>Repair Node/npm environment; enforce build in CI.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>5. Release decision and retest criteria</h2>
+  <p><b>NO-GO.</b> QA-001 is fixed and its targeted registration/OTP retest passes, but QA-002's remaining organisation-code coverage gap, QA-003–004, and the unverified frontend production build in QA-005 still prevent release approval. Retest is complete when the remaining QA-002–004 items are reconciled, the full suite and locked frontend build pass, and browser smoke tests verify OTP registration, eligible checkout, voucher/organisation-code access, assessment continuation, and protected admin actions.</p>
+
+  <h2>6. Passed-test inventory (100 checks)</h2>
+  <div class="inventory">
+    <section><h3>Unit · Example (1)</h3><ul><li>That true is true</li></ul></section>
+    <section><h3>Unit · OTP service (6)</h3><ul><li>Stores hashed code and emails it</li><li>Correct code verifies and is single use</li><li>Wrong code is rejected</li><li>Expired code is rejected</li><li>Too many wrong attempts invalidates</li><li>Purpose is scoped</li></ul></section>
+    <section><h3>Unit · Package catalogue (6)</h3><ul><li>Driver and Cashier status</li><li>Free and known-plan existence</li><li>Subscription-type status</li><li>Stripe price ID lookup</li><li>Price-ID reverse slug lookup</li><li>Blank DB price does not fall back to config</li></ul></section>
+    <section><h3>Unit · Stripe price manager (4)</h3><ul><li>Reuses valid existing price</li><li>Replaces invalid existing price</li><li>Creates price after billing change</li><li>Fails before create when Stripe key is missing</li></ul></section>
+    <section><h3>Unit · Voucher service (2)</h3><ul><li>Normalizes codes before hashing</li><li>Rejects non-alphanumeric code content</li></ul></section>
+    <section><h3>Unit · WordPress hash (8)</h3><ul><li>Accepts correct WP bcrypt hash</li><li>Rejects wrong WP bcrypt hash</li><li>Accepts correct phpass hash</li><li>Rejects wrong phpass hash</li><li>Accepts plain bcrypt hash</li><li>Rejects malformed hashes</li><li>Rejects overlong password</li><li>Rehashes only WordPress formats</li></ul></section>
+    <section><h3>Feature · Admin commercial workflow (11)</h3><ul><li>Changes public price before Stripe configuration</li><li>Uses current admin plan title in public CTA</li><li>Propagates price while Stripe unavailable</li><li>Saves enquiry-only plan with Stripe configured</li><li>Stores public organisation enquiry for admin</li><li>Starts business agreement only once</li><li>Emails and resends active organisation code</li><li>Shows only claimed enterprise-code users</li><li>Payment activates seats and enterprise code</li><li>Rotates enterprise code without usage change</li><li>Shows agreement usage and sidebar order</li></ul></section>
+    <section><h3>Feature · Admin insights (2)</h3><ul><li>Redesigned pages available to admins</li><li>Insight pages require admin session</li></ul></section>
+    <section><h3>Feature · Assessment resume (4)</h3><ul><li>Resumes standard assessment at next answer</li><li>Resumes dimensional assessment</li><li>Does not offer resume after completion</li><li>Shows resume only for saved signed-in progress</li></ul></section>
+    <section><h3>Feature · Example (1)</h3><ul><li>Application returns successful response</li></ul></section>
+    <section><h3>Feature · Native-login compatibility (3)</h3><ul><li>Repairs verified user without legacy identity</li><li>Mirror-only account cannot crash native sign-in</li><li>Activates mirror-only account after email reset</li></ul></section>
+    <section><h3>Feature · Native registration (19)</h3><ul><li>Loads signup page</li><li>Sends new login visitor to access choice</li><li>Creates and logs in valid registration</li><li>Pay-first registration reaches checkout</li><li>New public-purchase registration reaches checkout</li><li>Ineligible plan does not create account</li><li>Rejects duplicate email</li><li>Rejects duplicate username</li><li>Reopens purchase modal for duplicate username</li><li>Rejects underage signup</li><li>Rejects future DOB</li><li>Rejects ISO DOB format</li><li>Rejects password mismatch</li><li>Normalizes Dubai/UAE phone</li><li>Normalizes India phone</li><li>Normalizes USA phone</li><li>Requires valid phone country and digits</li><li>New user can log in natively</li><li>Selected plan login reaches checkout</li></ul></section>
+    <section><h3>Feature · Organisation codes (7)</h3><ul><li>Paid quote claims one available seat</li><li>Out-of-range age does not consume seat</li><li>Member code works through access form</li><li>Guest validates code then claims after sign-in</li><li>Another user cannot open confirmation</li><li>Admin disables and reenables existing code</li><li>Unpaid agreement activates code after payment</li></ul></section>
+    <section><h3>Feature · OTP flow (3)</h3><ul><li>Wrong registration OTP does not create account</li><li>Login does not send or require OTP</li><li>Wrong login password never sends OTP</li></ul></section>
+    <section><h3>Feature · Payment gate (5)</h3><ul><li>Free-first user enters intro</li><li>Pay-first free user returns to landing</li><li>Pay-first guest goes to sign-in</li><li>Pay-first paid user enters intro</li><li>Guest checkout preserves package for signup</li></ul></section>
+    <section><h3>Feature · Voucher and age eligibility (3)</h3><ul><li>Permanent voucher is single-use and grants package</li><li>Ineligible user cannot select/direct-checkout plan</li><li>Eligible user can continue to checkout</li></ul></section>
+    <section><h3>Feature · Public access and plans (4)</h3><ul><li>Public assessment choice reaches plans</li><li>Invalid public code shows error</li><li>Guest cannot use signed-in continuation</li><li>Invalid/free plan cannot enter purchase flow</li></ul></section>
+    <section><h3>Feature · Stripe webhook entitlement (11)</h3><ul><li>Completed session grants metadata package</li><li>Records paid checkout once</li><li>Admin payments prefer registered customer</li><li>Unpaid checkout does not grant</li><li>Active subscription grants by price ID</li><li>Deleted subscription downgrades to free</li><li>Past due retains access during dunning</li><li>Canceled subscription revokes access</li><li>Unpaid complete-status session does not grant</li><li>Entitlement service creates missing mirror</li><li>Unknown user is ignored safely</li></ul></section>
+  </div>
+
+  <p class="references"><b>References:</b> ISTQB test-summary-report definition: <a href="https://istqb-glossary.page/test-summary-report/">istqb-glossary.page</a>. IEEE 829 summary-report outline: <a href="https://istqbfoundation.wikidot.com/miscellaneous">istqbfoundation.wikidot.com</a>.</p>
+</body>
+</html>

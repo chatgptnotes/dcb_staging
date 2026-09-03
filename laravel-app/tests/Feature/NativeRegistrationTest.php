@@ -56,7 +56,7 @@ class NativeRegistrationTest extends TestCase
             'dob' => '01/01/2000',
             'email' => self::EMAIL,
             'country' => 'AE',
-            'phone' => '1234567',
+            'phone' => '512345678',
             'password' => 'Secret#2026',
             'password_confirmation' => 'Secret#2026',
         ], $overrides);
@@ -64,7 +64,12 @@ class NativeRegistrationTest extends TestCase
 
     public function test_signup_page_loads(): void
     {
-        $this->get('/sign-up')->assertOk()->assertSee('DD/MM/YYYY');
+        $this->get('/sign-up')
+            ->assertOk()
+            ->assertSee('DD/MM/YYYY')
+            ->assertSee('Mobile country/region')
+            ->assertSee('United Arab Emirates (+971)')
+            ->assertSee('data-length="9"', false);
     }
 
     public function test_login_page_sends_new_visitors_to_the_access_choice(): void
@@ -85,7 +90,7 @@ class NativeRegistrationTest extends TestCase
         $this->assertGreaterThanOrEqual(1000000, (int) $user->wp_user_id);
         $this->assertTrue(Hash::check('Secret#2026', $user->password));
         $this->assertSame('Native Tester', $user->display_name);
-        $this->assertSame('+9711234567', $user->billing_phone);
+        $this->assertSame('+971512345678', $user->billing_phone);
         $this->assertSame('AE', $user->billing_country);
 
         // wp_users mirror with the free package.
@@ -197,6 +202,8 @@ class NativeRegistrationTest extends TestCase
         $this->get(route('public.plans'))
             ->assertOk()
             ->assertSee('modal open', false)
+            ->assertSee('Mobile country/region')
+            ->assertSee('data-length="9"', false)
             ->assertSee('That username is already taken.')
             ->assertSee('value="Native"', false)
             ->assertSee('value="native_signup_test"', false)
@@ -251,7 +258,7 @@ class NativeRegistrationTest extends TestCase
     public static function supportedPhoneNumbers(): array
     {
         return [
-            'Dubai/UAE' => ['AE', '1234567', '+9711234567'],
+            'United Arab Emirates' => ['AE', '512345678', '+971512345678'],
             'India' => ['IN', '9876543210', '+919876543210'],
             'USA' => ['US', '4155550123', '+14155550123'],
         ];
@@ -259,13 +266,19 @@ class NativeRegistrationTest extends TestCase
 
     public function test_phone_country_and_digits_are_required_and_length_checked(): void
     {
-        $this->post('/sign-up', $this->validPayload(['country' => '', 'phone' => '1234567']))
+        $this->post('/sign-up', $this->validPayload(['country' => '', 'phone' => '512345678']))
             ->assertSessionHasErrors('country');
 
         $this->post('/sign-up', $this->validPayload(['country' => 'IN', 'phone' => '123456789']))
             ->assertSessionHasErrors('phone');
 
-        $this->post('/sign-up', $this->validPayload(['country' => 'US', 'phone' => '415-555-0123']))
+        $this->post('/sign-up', $this->validPayload(['country' => 'AE', 'phone' => '1234567']))
+            ->assertSessionHasErrors('phone');
+
+        $this->post('/sign-up', $this->validPayload(['country' => 'AE', 'phone' => '412345678']))
+            ->assertSessionHasErrors('phone');
+
+        $this->post('/sign-up', $this->validPayload(['country' => 'US', 'phone' => '1155550123']))
             ->assertSessionHasErrors('phone');
     }
 
