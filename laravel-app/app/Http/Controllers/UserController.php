@@ -42,11 +42,6 @@ use App\Http\Controllers\BrainResultsController;
 
 class UserController extends Controller
 {
-    private const REGISTRATION_PHONE_COUNTRIES = [
-        'AE' => ['dial_code' => '+971', 'length' => 7, 'label' => 'Dubai / UAE'],
-        'IN' => ['dial_code' => '+91', 'length' => 10, 'label' => 'India'],
-        'US' => ['dial_code' => '+1', 'length' => 10, 'label' => 'USA'],
-    ];
 
 //     public function sign_in(Request $request) {
 
@@ -808,18 +803,19 @@ private function signUpNative(Request $request)
 /** Validate and normalize the country-specific registration mobile number. */
 private function validateRegistrationPhone(Request $request): array
 {
+    $countries = config('registration.phone_countries', []);
     $data = $request->validate([
-        'country' => ['required', 'string', Rule::in(array_keys(self::REGISTRATION_PHONE_COUNTRIES))],
+        'country' => ['required', 'string', Rule::in(array_keys($countries))],
         'phone' => ['required', 'string', 'regex:/^\d+$/'],
     ]);
 
     $country = $data['country'];
-    $rule = self::REGISTRATION_PHONE_COUNTRIES[$country];
+    $rule = $countries[$country];
     $phone = $data['phone'];
 
-    if (strlen($phone) !== $rule['length']) {
+    if (strlen($phone) !== $rule['length'] || ! preg_match($rule['pattern'], $phone)) {
         throw ValidationException::withMessages([
-            'phone' => "Enter exactly {$rule['length']} digits for {$rule['label']}, without {$rule['dial_code']}.",
+            'phone' => $rule['hint'],
         ]);
     }
 
@@ -900,8 +896,8 @@ private function createNativeUserFromData(array $data, Request $request)
                 $u->email = $data['email'];
                 $u->display_name = $data['display_name'];
                 $u->date_of_birth = $data['date_of_birth'];
-                $u->billing_phone = $data['billing_phone'] ?: null;
-                $u->billing_country = $data['billing_country'] ?: null;
+                $u->billing_phone = $data['billing_phone'] ?? null;
+                $u->billing_country = $data['billing_country'] ?? null;
                 $u->password = $data['password_hash'];
                 $u->user_role = '2';
                 $u->status = 'active';
