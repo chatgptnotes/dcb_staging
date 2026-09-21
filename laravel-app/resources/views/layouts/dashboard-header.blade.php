@@ -2,8 +2,8 @@
 use App\Models\CustomerDetails;
 use App\Models\Events;
 use App\Models\WPUsers;
-$customer_name = session('user_details')['display_name'];
-$customer_email = session('user_details')['email'];
+$customer_name = session('user_details.display_name', '');
+$customer_email = session('user_details.email', '');
 $events = Events::where('status', 'active')->get();
 
 $dob = session('user_dob'); 
@@ -472,4 +472,3 @@ h1, h2, h3, h4, h5, h6, p, span, div, a, li {
                         </div>
                     </div>
                 </div>
-         
