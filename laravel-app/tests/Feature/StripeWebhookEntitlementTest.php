@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Models\PricingPackage;
 use App\Models\PaymentRecord;
@@ -142,6 +143,29 @@ class StripeWebhookEntitlementTest extends TestCase
             'status' => 'paid',
         ]);
         $this->assertSame(1, PaymentRecord::where('checkout_session_id', 'cs_webhook_test_001')->count());
+    }
+
+    public function test_checkout_billing_name_does_not_replace_the_registered_profile_name(): void
+    {
+        User::where('wp_user_id', self::WP_ID)->update([
+            'display_name' => 'Registered Profile Name',
+        ]);
+
+        $session = (object) [
+            'customer_details' => (object) [
+                'name' => 'Stripe Billing Name',
+                'email' => 'wh-test@example.local',
+            ],
+            'customer' => 'cus_webhook_test_profile_name',
+            'custom_fields' => [],
+        ];
+
+        $method = new \ReflectionMethod(CheckoutController::class, 'finalizeCheckoutUser');
+        $method->setAccessible(true);
+        $user = $method->invoke(app(CheckoutController::class), self::WP_ID, $session);
+
+        $this->assertNotNull($user);
+        $this->assertSame('Registered Profile Name', $user->display_name);
     }
 
     public function test_admin_payments_prefer_the_registered_customer_for_recorded_checkout(): void

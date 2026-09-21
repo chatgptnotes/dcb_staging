@@ -425,11 +425,17 @@ use App\Models\SkillBrainScores;
 use App\Models\QuestionAnswerMain;
 use App\Models\SkillTestAnswersMain;
 use App\Models\UserDimensionalScore;
+use App\Services\Billing\PackageCatalog;
 $attempt = QuestionAnswerMain::where("user_id", session('user_id'))->where('status', 'complete')->first();
 $skill_tests = SkillTestAnswersMain::where("user_id", session('user_id'))->where('status', 'complete')->get();
 $wp_user = WPUsers::where('user_id', session('user_id'))->first();
 $introvert_extrovert = $wp_user->introverted_extroverted;
-$user_package = $wp_user->package;
+$entitlement_package = $wp_user->package ?? null;
+$has_paid_dashboard_access = app(PackageCatalog::class)->isPaid($entitlement_package);
+// The legacy markup below contains many exact-slug checks. Feed it one
+// canonical paid slug only for presentation; route middleware still checks
+// the real entitlement from wp_users on every protected request.
+$user_package = $has_paid_dashboard_access ? 'decodemybrain-deep-dive' : $entitlement_package;
 $d_score = UserDimensionalScore::where('user_id',session('user_id'))->first();
 ?>
 

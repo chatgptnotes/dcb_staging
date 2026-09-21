@@ -3,11 +3,16 @@
 namespace App\Http\Middleware;
 
 use App\Models\WPUsers;
+use App\Services\Billing\PackageCatalog;
 use Closure;
 use Illuminate\Http\Request;
 
 class ValidatePackage
 {
+    public function __construct(private PackageCatalog $catalog)
+    {
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -34,13 +39,11 @@ class ValidatePackage
             return redirect('/billing')->with('fail', 'Please upgrade your package.');
         }
 
-        $normalizedAllowed = array_map(function ($package) {
-            return strtolower(trim($package, " \t\n\r\0\x0B\"'"));
-        }, $allowedPackages);
-
-        $normalizedUserPackage = strtolower(trim($wpUser->package));
-
-        if (in_array($normalizedUserPackage, $normalizedAllowed, true)) {
+        // Existing routes still pass the two former plan slugs as middleware
+        // parameters. Paid access is now catalog-driven so a current plan
+        // such as small-group cannot be accepted by checkout/dashboard and
+        // then rejected at its report route.
+        if ($this->catalog->isPaid($wpUser->package)) {
             return $next($request);
         }
 

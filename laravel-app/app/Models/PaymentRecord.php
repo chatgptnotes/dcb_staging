@@ -12,5 +12,7 @@ class PaymentRecord extends Model
 
     protected $casts = [
         'paid_at' => 'datetime',
+        'invoice_sent_at' => 'datetime',
+        'invoice_data' => 'array',
     ];
 }

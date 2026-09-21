@@ -87,6 +87,20 @@ final class PackageCatalog
         return $slug === $this->freeSlug() || isset($this->plans()[$slug]);
     }
 
+    /**
+     * Whether an entitlement slug grants paid member access. Keeping this
+     * decision in the catalog prevents checkout, middleware, and dashboard
+     * templates from drifting as plans are renamed or added.
+     */
+    public function isPaid(string|null $slug): bool
+    {
+        $normalized = strtolower(trim((string) $slug, " \t\n\r\0\x0B\"'"));
+
+        return $normalized !== ''
+            && $normalized !== strtolower($this->freeSlug())
+            && isset($this->plans()[$normalized]);
+    }
+
     public function isSubscription(string $slug): bool
     {
         return ($this->plan($slug)['type'] ?? null) === 'subscription';
