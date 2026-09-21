@@ -188,6 +188,8 @@ class OrganizationCodeServiceTest extends TestCase
                 'user_name' => 'org_code_signup_'.$suffix,
                 'dob' => now()->subYears(16)->subDay()->format('d/m/Y'),
                 'email' => $email,
+                'country' => 'AE',
+                'phone' => '512345678',
                 'password' => 'safe-test-password',
                 'password_confirmation' => 'safe-test-password',
             ]);

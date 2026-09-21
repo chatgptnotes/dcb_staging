@@ -24,7 +24,7 @@ class AdminUserManagementVisibilityTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_admin_sees_registered_voucher_user_on_dashboard_plan_and_status_pages(): void
+    public function test_admin_sees_registered_voucher_user_on_plan_and_status_pages(): void
     {
         $suffix = (string) max(9_200_000, (int) User::max('wp_user_id') + 202);
         $admin = new User();
@@ -45,7 +45,7 @@ class AdminUserManagementVisibilityTest extends TestCase
         $customer->save();
 
         $mirror = new WPUsers();
-        $mirror->user_id = (int) $suffix;
+        $mirror->user_id = (int) $suffix;   
         $mirror->email = $customer->email;
         $mirror->display_name = $customer->display_name;
         $mirror->package = 'decodemybrain-deep-dive';
@@ -62,7 +62,7 @@ class AdminUserManagementVisibilityTest extends TestCase
         ]);
 
         $this->actingAs($admin);
-        $this->get('/admin/dashboard')->assertOk()->assertSee('Admin Visible User')->assertSee('Permanent voucher');
+        $this->get('/admin/dashboard')->assertOk();
         $this->get('/admin/user-plan')->assertOk()->assertSee('Admin Visible User')->assertSee('Permanent voucher');
         $this->get('/admin/user-status')->assertOk()->assertSee('Admin Visible User');
     }

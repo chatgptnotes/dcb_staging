@@ -190,67 +190,44 @@ class CheckoutController extends Controller
 
     public function success(Request $request)
     {
-        // Primary path: the signed Stripe webhook grants entitlement. As a
-        // robust fallback (and so it works without a local webhook listener),
-        // verify the Checkout Session directly with Stripe here and grant if
-        // paid. Verified server-side, so a forged session_id can't unlock.
+        // A Stripe payment proves a purchase, not the identity of this browser.
+        $userId = (int) session('user_id');
+        if ($userId <= 0) {
+            return redirect('sign-in')->with('fail', 'Please sign in to your account to view your purchase.');
+        }
+
         $sessionId = (string) $request->query('session_id');
-        if ($sessionId !== '') {
-            try {
-                $stripe = new \Stripe\StripeClient(config('cashier.secret'));
-                $session = $stripe->checkout->sessions->retrieve($sessionId, []);
+        if ($sessionId === '') {
+            return redirect('/')->with('fail', 'Payment could not be verified.');
+        }
 
-                $paid = ($session->payment_status ?? null) === 'paid'
-                    || ($session->payment_status ?? null) === 'no_payment_required'
-                    || (($session->status ?? null) === 'complete' && ! empty($session->subscription));
-                $wpId = (int) ($session->metadata->wp_user_id ?? 0);
-                $package = (string) ($session->metadata->package ?? '');
-
-                \Log::info('Checkout success verified', [
-                    'session_id' => $sessionId,
-                    'paid' => $paid,
-                    'wp_user_id' => $wpId,
-                    'package' => $package,
-                    'payment_status' => $session->payment_status ?? null,
-                    'status' => $session->status ?? null,
-                ]);
-
-                if ($paid && $this->catalog->exists($package)) {
-                    $this->payments->recordSuccessfulCheckout($session->toArray());
-                    if ($wpId > 0) {
-                        $user = $this->finalizeCheckoutUser($wpId, $session);
-                        if ($user !== null) {
-                            $this->entitlements->setPackage((int) $user->wp_user_id, $package);
-                            $this->syncWpMirror($user, $package);
-                            $this->loginCheckoutUser($user);
-                        }
-                    } elseif ($wpId === 0) {
-                        $user = $this->createOrLoginPaidCheckoutUser($session);
-                        if ($user !== null) {
-                            $this->entitlements->setPackage((int) $user->wp_user_id, $package);
-                            $this->syncWpMirror($user, $package);
-                            $this->loginCheckoutUser($user);
-                        }
-                    }
-                    $this->vouchers->recordCheckoutRedemption($session->toArray());
-                    session()->forget('pending_checkout_voucher_id');
-                }
-            } catch (\Throwable $e) {
-                \Log::warning('Checkout success verification failed', ['error' => $e->getMessage()]);
+        try {
+            $stripe = new \Stripe\StripeClient(config('cashier.secret'));
+            $checkout = $stripe->checkout->sessions->retrieve($sessionId, []);
+            $ownerId = (int) ($checkout->metadata->wp_user_id ?? 0);
+            $user = User::where('wp_user_id', $userId)->first();
+            if ($ownerId !== $userId || $user === null || strtolower((string) $user->status) !== 'active') {
+                return redirect('/')->with('fail', 'This checkout does not belong to your signed-in account.');
             }
-        }
 
-        if (session('user_id')) {
-            \Log::info('Checkout success redirecting to assessment', [
-                'user_id' => session('user_id'),
-            ]);
+            $package = (string) ($checkout->metadata->package ?? '');
+            if (! in_array($checkout->payment_status, ['paid', 'no_payment_required'], true)
+                || ! $this->catalog->exists($package) || $package === $this->catalog->freeSlug()) {
+                return redirect('/')->with('fail', 'Payment is not confirmed yet. Please try again shortly.');
+            }
+
+            // Keep the registered identity; checkout billing details cannot switch accounts.
+            $this->entitlements->setPackage($userId, $package);
+            $this->payments->recordSuccessfulCheckout($checkout->toArray());
+            $this->vouchers->recordCheckoutRedemption($checkout->toArray());
+            session()->forget('pending_checkout_voucher_id');
+
             return redirect('/questions/q1')->with('success', 'Payment successful. Start your assessment.');
-        }
+        } catch (\Throwable $e) {
+            \Log::warning('Checkout success verification failed', ['error' => $e->getMessage()]);
 
-        \Log::warning('Checkout success did not create a paid session', [
-            'session_id' => $sessionId,
-        ]);
-        return redirect('/')->with('fail', 'Payment could not be verified. Please contact support.');
+            return redirect('/')->with('fail', 'Payment could not be verified. Please contact support.');
+        }
     }
 
     public function cancel(Request $request)
@@ -346,7 +323,10 @@ class CheckoutController extends Controller
             }
         }
 
-        if ($name !== '') {
+        // A signed-up member's display name is their profile identity. Stripe
+        // Checkout's billing name may be different (for example, a parent or
+        // cardholder), so only use it to fill a missing legacy profile name.
+        if ($name !== '' && trim((string) $user->display_name) === '') {
             $user->display_name = $name;
         }
 

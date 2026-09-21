@@ -398,36 +398,43 @@ private function completeNativeLogin(User $user, ?string $ssoLink, Request $requ
  */
 private function adoptGuestAnswersAndRedirect(Request $request)
 {
-    if (session('answer_main_id')) {
-        if (QuestionAnswerMain::where("user_id", session('user_id'))->exists()) {
-            QuestionAnswerMain::where("id", session('answer_main_id'))->delete();
-            QuestionAnswers::where("answer_main_id", session('answer_main_id'))->delete();
-            $request->session()->forget(['answer_main_id']);
-        } else {
-            $QuestionAnswerMain = QuestionAnswerMain::where('id', session('answer_main_id'))->first();
-            if ($QuestionAnswerMain) {
-                $QuestionAnswerMain->user_id = session('user_id');
-                $QuestionAnswerMain->update();
-
-                $BrainResultsController = new BrainResultsController();
-                $BrainResultsController->add_brain_results(session('answer_main_id'));
-
-                $request->session()->forget(['answer_main_id']);
-            }
+    // Session references may belong to this member, a guest, or a previous
+    // member on the same browser. Login must never delete or transfer owned work.
+    foreach ([
+        'answer_main_id' => [QuestionAnswerMain::class, 'add_brain_results'],
+        'd_answer_main_id' => [DimensionalQuestionAnswerMain::class, 'add_dimensional_brain_results'],
+    ] as $sessionKey => [$model, $resultMethod]) {
+        $attemptId = session($sessionKey);
+        if (! $attemptId) {
+            continue;
         }
-    }
 
-    if (session('d_answer_main_id')) {
-        $DimensionalQuestionAnswerMain = DimensionalQuestionAnswerMain::where('id', session('d_answer_main_id'))->first();
+        $userId = (int) session('user_id');
+        $adoptedComplete = false;
+        $owned = DB::transaction(function () use ($model, $attemptId, $userId, &$adoptedComplete) {
+            $attempt = $model::whereKey($attemptId)->lockForUpdate()->first();
+            if (! $attempt) {
+                return false;
+            }
+            if ((int) $attempt->user_id === $userId) {
+                return true;
+            }
+            if ((int) $attempt->user_id !== 0 || $model::where('user_id', $userId)->exists()) {
+                return false;
+            }
 
-        if ($DimensionalQuestionAnswerMain) {
-            $DimensionalQuestionAnswerMain->user_id = session('user_id');
-            $DimensionalQuestionAnswerMain->update();
+            $attempt->user_id = $userId;
+            $attempt->save();
+            $adoptedComplete = $attempt->status === 'complete';
 
-            $BrainResultsController = new BrainResultsController();
-            $BrainResultsController->add_dimensional_brain_results(session('d_answer_main_id'));
+            return true;
+        });
 
-            $request->session()->forget(['d_answer_main_id']);
+        if (! $owned) {
+            $request->session()->forget($sessionKey);
+        } elseif ($adoptedComplete) {
+            app(BrainResultsController::class)->{$resultMethod}($attemptId);
+            $request->session()->forget($sessionKey);
         }
     }
 

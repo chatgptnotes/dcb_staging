@@ -51,10 +51,7 @@ class MainController extends Controller
     // Public landing page (replaces the WordPress front page). Visitors pick a
     // plan here; the funnel takes over from the "Book Today" buttons.
     public function landing(AssessmentResumeService $resume){
-        $packages = \App\Models\PricingPackage::whereIn('slug', [
-            'decodemybrain-deep-dive',
-            'decodemybrain-guided-friend-and-family-connect',
-        ])->get()->keyBy('slug');
+        $packages = \App\Models\PricingPackage::where('is_visible', true)->orderBy('sort_order')->get();
 
         $userId = (int) session('user_id');
         $dateOfBirth = session('user_dob') ?: ($userId ? WPUsers::where('user_id', $userId)->value('date_of_birth') : null);

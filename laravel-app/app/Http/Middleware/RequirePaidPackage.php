@@ -36,11 +36,7 @@ class RequirePaidPackage
         }
 
         $package = WPUsers::where('user_id', $userId)->value('package');
-        $normalized = strtolower(trim((string) $package, " \t\n\r\0\x0B\"'"));
-
-        // Paid = any catalogued plan that isn't the free slug.
-        $paidSlugs = array_keys($this->catalog->plans());
-        if (in_array($normalized, $paidSlugs, true)) {
+        if ($this->catalog->isPaid($package)) {
             return $next($request);
         }
 

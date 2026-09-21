@@ -40,6 +40,7 @@ $router->aliasMiddleware('validatePackage', ValidatePackage::class);
 $router->aliasMiddleware('requirePaid', RequirePaidPackage::class);
 
 Route::get('/', [MainController::class, 'landing'])->name('landing');
+Route::view('/science', 'public.science')->name('public.science');
 Route::match(['get', 'post'],'/intro', [QuestionsController::class, 'intro'])->middleware('requirePaid');
 Route::match(['get', 'post'],'/questions/{question}', [QuestionsController::class, 'question'])->middleware('authCustomer')->middleware('requirePaid');
 Route::match(['get', 'post'],'/childquestions/{question}', [QuestionsController::class, 'childquestions'])->middleware('requirePaid');
@@ -194,9 +195,6 @@ Route::get('/pricing', function () {
 
 Route::match(['get', 'post'],'/events-new', [MainController::class, 'events_new'])->middleware('authCustomer')->middleware('AuthQuestionAnswered');
 
-Route::get('/contact-form', function () {
-    return view('contact_form');
-});
 
 Route::get('/intro-extro', function () {
     return view('new_pages.intro_extro');

@@ -4,10 +4,15 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\WPUsers;
+use App\Services\Billing\PackageCatalog;
 
 class checkUserPacakge
 {
+    public function __construct(private PackageCatalog $catalog)
+    {
+    }
+
     /**
      * Handle an incoming request.
      *
@@ -17,31 +22,15 @@ class checkUserPacakge
      */
     public function handle(Request $request, Closure $next)
     {
-        $url = 'https://projects.genaitech.dev/zebrabrain-wordpress-api/wp-json/yith-subscription/v1/list/' . session('user_id');
+        $userId = (int) session('user_id');
+        $package = $userId > 0
+            ? WPUsers::where('user_id', $userId)->value('package')
+            : null;
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        $response = curl_exec($ch);
-         
-        if (curl_errno($ch)) {
-            curl_close($ch);
-            return back()->with('package-fail', 'Failed to fetch subscription data. Please try again later.');
-        }
-        
-        curl_close($ch);
-        
-        $data = json_decode($response, true);
-        
-        if (isset($data['code']) && $data['code'] === 'No active subscriptions') {
-            return back()->with('package-fail', 'Please Upgrade Your Package.');
-        }
-        
-        if (is_array($data) && !empty($data)) {
+        if ($this->catalog->isPaid($package)) {
             return $next($request);
-        } else {
-            return back()->with('package-fail', 'Unexpected response format. Please try again later.');
         }
 
+        return back()->with('package-fail', 'Please upgrade your package to access this feature.');
     }
 }

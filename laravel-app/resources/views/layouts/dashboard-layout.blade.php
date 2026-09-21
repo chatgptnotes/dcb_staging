@@ -2,6 +2,7 @@
 use App\Models\CustomerDetails;
 use App\Models\Events;
 use App\Models\WPUsers;
+$catalog = app(\App\Services\Billing\PackageCatalog::class);
 $customer_name = session('user_details')['display_name'];
 $customer_email = session('user_details')['email'];
 $events = Events::where('status', 'active')->get();
@@ -11,7 +12,9 @@ $age = \Carbon\Carbon::parse($dob)->age;
 
 $wp_user =  WPUsers::where('user_id', session('user_id'))->first();
 $user_current_age = $wp_user->age ?? 0;
-$user_package = $wp_user->package ?? null;
+$user_package = $catalog->isPaid($wp_user->package ?? null)
+    ? 'decodemybrain-deep-dive'
+    : ($wp_user->package ?? null);
 
 
 ?>

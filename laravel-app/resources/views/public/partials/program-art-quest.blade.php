@@ -1,0 +1,1 @@
+<svg viewBox="0 0 180 130" fill="none"><circle cx="62" cy="39" r="19" stroke="#111" stroke-width="4"/><path d="M43 100c3-28 13-43 28-45 18-3 29 13 31 45M100 39h55M128 39v56M112 95h33" stroke="#111" stroke-width="4" stroke-linecap="round"/><circle cx="138" cy="27" r="16" stroke="#111" stroke-width="4"/><path d="M132 27l5 6 9-13" stroke="#111" stroke-width="4"/></svg>

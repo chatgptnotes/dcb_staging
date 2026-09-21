@@ -60,7 +60,31 @@ final class CheckoutPaymentRecorder
             'status' => 'paid',
             'paid_at' => $created,
         ]);
+        // Invoice only explicitly settled payments, never merely complete sessions.
+        $email = $this->firstPresent($user?->email, $customerDetails['email'] ?? null);
+        if ($email && str_ends_with($email, '@pending.decodemybrain.local')) {
+            $email = $customerDetails['email'] ?? null;
+        }
+        if ($record->invoice_data === null
+            && in_array($session['payment_status'] ?? null, ['paid', 'no_payment_required'], true)
+            && isset($session['amount_total'])
+            && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $record->invoice_data = [
+                'email' => $email,
+                'name' => $record->customer_name,
+                'package' => app(PackageCatalog::class)->plan((string) $record->package_slug)['name'] ?? $record->package_slug ?? 'Assessment',
+                'discount' => (int) ($session['total_details']['amount_discount'] ?? 0),
+                'tax' => (int) ($session['total_details']['amount_tax'] ?? 0),
+            ];
+        }
         $record->save();
+
+        try {
+            app(PaymentInvoiceSender::class)->send($record);
+        } catch (\Throwable $e) {
+            // The scheduled retry handles delivery without blocking paid access.
+            report($e);
+        }
     }
 
     private function stripeId(mixed $value): ?string
