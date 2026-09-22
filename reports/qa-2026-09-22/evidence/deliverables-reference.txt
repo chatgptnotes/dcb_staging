@@ -1,0 +1,289 @@
+DecodeMyBrain® — Laravel
+PROJECT DELIVERABLES · DMB-2026-DEL-01
+
+
+
+
+Rebuild Deliverables
+Full native Laravel 10 migration — user flows, phased build plan, admin
+dashboard, corporate batch system, and technical narrative.
+
+   PROGRAM 1             PROGRAM 2           PROGRAM 3              ALSO INCLUDED
+   Quest
+   Ages 12–14
+                         Evolve
+                         Ages 15–18
+                                             Summit
+                                             Ages 18–50
+                                                                    Brain  Connect
+                                                                    Family matching
+
+   S TAC K                                            M E M B E R P L AT F O R M
+   Laravel 10 · MySQL · Blade · Stripe Cashier        Already built — assessments, scores, PDFs, auth
+
+
+
+
+DOCUMENT                               PROJECT                                     TIMELINE                             PREPARED
+Project Deliverables                   DecodeMyBrain®                              15–23 Working Days                   21 June 2026
+Phased build plan + workflow           decodemybrain.com                           3–5 weeks · 7 phases · 1 developer   Ref: DMB-2026-DEL-01
+diagrams
+01 — MISSION & LOCKED DECISIONS
+One Native Laravel App. No WordPress. No WooCommerce.
+   The logged-in member platform — assessments, scoring, PDF reports, Stripe checkout — is already built and live at app.decodemybrain.com. Users
+   land on limitlessbrainlab.org and are redirected to the app. The rebuild adds the public frontend and a simplified pay-first purchase flow around it.
+   Nothing in the existing member engine changes. The program (Quest / Evolve / Summit) is not selected by the user — it is auto-mapped after
+   registration based on date of birth.
+
+   Pay-First Funnel                                               Plan Mapped After Registration                              WordPress Cord Cut
+   No free plan. Register and pay in one step.                    Program is never selected before or during                  WooCommerce replaced by Stripe Cashier. WP
+   Credentials emailed after payment. Assessment                  registration. DOB entered at registration                   user bridge retired. Native MySQL becomes the
+   unlocks on first login.                                        automatically maps to Quest, Evolve, or Summit              single source of truth.
+                                                                  after payment.
+
+02 — INDIVIDUAL USER PURCHASE FLOW
+7 Steps from Discovery to Brain Report
+                                                             3                                                                           6
+          1                         2                                                    4                        5               EXISTING                                7
+  Landing Page              Program Page             Register + Pay                Email Sent                  Log In              Assessment                EXISTING
+                                                    Name · Email · DOB                                                              Age-matched               Book Coaching
+   Quest · Evolve              "Read More"           Stripe one-time           Username + Password       app.decodemybrain                                    Optional post-report
+   Summit cards               program detail                                        + app link                  .com                  brain test                     upsell
+                                                         payment                                                                    → PDF Report
+
+   DOB entered at step 3 = program routed                        Email: info@limitlessbrain.com                                No free plan — assessment gated
+   Quest 12-14 · Evolve 15-18 · Summit 18-50                     Username + password + app link auto-sent post-payment         RequirePaidPackage middleware enforces access
+
+Registration and payment happen in one step — no separate sign-up. Stripe Cashier handles the one-time payment. Credentials are auto-emailed post-payment. No free tier exists.
+Grey steps (6 + 7) are existing Laravel code — Assessment and Book Coaching are NOT to be built by us. They are retained as-is from the live member platform at
+app.decodemybrain.com. Users enter via limitlessbrainlab.org and are redirected there.
+
+03 — PROGRAMS & AGE ROUTING
+  PROGRAM                 AGE RANGE                 TAGLINE                                                                          ASSESSMENT SERVED
+  Quest                   12–14 years               Building Strong Foundations for Future Success                                   Quest brain questionnaire
+  Evolve                  15–18 years               Guiding Teens Towards a Successful Career                                        Evolve brain questionnaire
+  Summit                  18–50 years               Unlocking Lifelong Growth and Fulfillment                                        Summit / adult questionnaire
+DOB entered at registration is the only routing signal. The system selects the correct assessment automatically — the user never manually picks a program after paying.
+
+
+
+
+DecodeMyBrain®                                                                               DMB-2026-DEL-01 · 21 June 2026                                      Page 2
+app.decodemybrain.com · info@limitlessbrain.com                                                                                                                  Individual User Flow
+                                          CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT
+04 — TECHNICAL WORKFLOW — AS NARRATED BY DR. SWETA ADATIA
+The Journey Inside the Platform
+   "When I designed DecodeMyBrain, I wanted every family to feel that science was working quietly in the background — not that they were filling
+   forms. Here is what actually happens the moment someone trusts us with their brain."
+   — Dr. Sweta Adatia, MBBS MD DNB(Neurology) FACP MBA(Cambridge), Founder
+
+ 1 You arrive. We do not ask for much — just your name, email, and date of birth. REGISTRATION
+      That date of birth is everything. Our system instantly looks at it and routes you to the correct program — Quest for a child between 12 and 14, Evolve for a teenager
+      from 15 to 18, Summit for an adult. No dropdown. No confusion. The brain science knows your stage of life already. Under the hood, the Laravel backend writes your
+      record to the users table in MySQL, hashes your details, and stamps a dob field that drives every decision from here.
+ 2 You pay once. We unlock a lifetime of insight. STRIPE CASHIER
+      Stripe handles your card. When payment clears, a webhook fires instantly to our server. Our StripeWebhookController receives it, verifies the signature, and calls
+       EntitlementService to write your package slug — decodemybrain-deep-dive or equivalent — to the users table. The RequirePaidPackage middleware now
+      opens every assessment route for you. This takes less than two seconds after you click Pay.
+ 3 An email arrives with your key. LARAVEL MAIL
+      Immediately after entitlement is confirmed, our mail system sends your credentials — username, auto-generated password, and a direct link to
+       app.decodemybrain.com . The email goes from info@limitlessbrain.com. There is no waiting room. You open the email, click the link, and you are inside.
+
+
+ 4 The  assessment begins. 100+ questions that reveal your whole brain. QUESTIONSCONTROLLER
+   Your questionnaire is not a personality quiz. It is a neuroscience-backed whole-brain map. The QuestionsController serves questions one at a time from the
+       questions table, storing each answer in question_answers linked to your session. Beyond the core 100+ questions, there are dimensional questions (left-brain /
+      right-brain balance), an introvert–extrovert dimension, a skill assessment, and interactive game-style tasks — all gated by the AuthQuestionAnswered middleware
+      so you cannot skip ahead. Your progress is saved after every single answer, so a refresh never loses work.
+ 5 Your brain profile is computed. SCORING ENGINE
+      When you submit the last answer, our scoring engine reads all your responses from question_answers , dimensional_question_answers ,
+       introvert_extrovert_question_answers , and skill_test_question_answers . It calculates your scores across five brain dimensions — Analytical, Creative,
+      Emotional, Practical, and Intuitive — and writes them to brain_scores and user_dimensional_score . This is the moment your unique brain blueprint is born. It
+      usually takes under three seconds.
+ 6 Your PDF Report is generated. A personalised blueprint, not a generic printout. BRAINRESULTSCONTROLLER
+      The BrainResultsController queries your scores and passes them to a Blade PDF template. The template combines your dimension scores, career suggestions,
+      learning strategies, and parenting or self-development insights based on your program. A percentage score per brain quadrant is displayed as a visual chart. The PDF
+      is saved to public/reports_pdfs/ and linked to your dashboard. You can download it at any time. The admin can also access it from the Super Admin panel.
+ 7 You book a coach. We close the loop. CONSULTATION BOOKING
+      After your report, your dashboard shows a booking option. Clicking it takes you to a two-step consultation booking flow — pick a time slot, confirm. The booking is
+      saved to the database and an email notification goes to the DecodeMyBrain team. This is optional — the report alone is a complete, stand-alone deliverable. The
+      coaching session deepens it.
+
+
+
+
+DecodeMyBrain®                                                             DMB-2026-DEL-01 · 21 June 2026                              Page 3
+app.decodemybrain.com · info@limitlessbrain.com                                                                                        Technical Narrative — Dr. Sweta Adatia
+                                      CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT
+05 — CORPORATE / BULK FLOW
+Offline Payment · Batch Codes · Super Admin Visibility
+   Corporate clients pay offline (invoice / bank transfer). Super Admin generates a unique batch code with a seat limit. The code goes to the corporate
+   contact who shares it with their team. Each employee uses the code to unlock their assessment — no individual payment. Super Admin sees every
+   employee's progress in real time.
+  A D M I N T R AC K                      E M P LOY E E T R AC K ( x N )
+                                                                                                              Super Admin — Real-Time Visibility
+        Corporate Client                            Employee
+     Offline payment · N seats             Receives code from manager
+
+                                                                                           47                       3                      44                         3
+                                                                                        Seats Used               Remaining             Reports Done                 Pending
+       Super Admin Panel                           Enter Code
+   Creates batch · sets seat limit            app.decodemybrain.com                EMPLOYEES — Sahil Corp (50 seats)
+                                                                                    NAME                         PROGRAM              STATUS                     REPORT
+                                                                                    Haritha Shah                 Evolve               Completed                  Download
+     Batch Code Generated                       Account Created                     Rahul Mehta                  Summit               In Progress                —
+    Unique code · max-use = N                  Assessment unlocked                  Priya Nair                   Quest                Not Started                —
+                                                                                    + 47 more employees…
+        Email to Contact                       PDF Report Ready                            Download All Reports                           Generate New Batch Code
+     Code + login instructions                 Visible to Super Admin
+No Stripe involved for corporate. Seat count enforced server-side — the (N+1)th use is rejected automatically. Code format to be confirmed with client (length, expiry, alphanumeric
+pattern).
+
+
+
+
+DecodeMyBrain®                                                                          DMB-2026-DEL-01 · 21 June 2026                                          Page 4
+app.decodemybrain.com · info@limitlessbrain.com                                                                                                                 Corporate / Bulk Flow
+                                        CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT
+0 6 — W H AT E X I S T S VS . W H AT G E T S B U I LT
+The Member Platform is Already Live — We Add Around It
+  A L R E A DY W O R K I N G — K E E P A S - I S                                            BUILD — PUBLIC FRONTEND + ADMIN UPGRADES
+  + Auth + Email OTP / 2FA                                                                  → Pay-First Purchase Flow
+     Sign-up, login, OTP, password reset                                                         Flip PAYMENTS_DRIVER=cashier, FUNNEL_MODE=pay_first
+  + Brain Assessments                                                                       → Post-Payment Credentials Email
+     100+ questions, games, dimensional, skill, I/E tests                                        Username + password + app link via info@limitlessbrain.com
+  + Scoring + PDF Reports                                                                   → 4 UI Forms + DB Tables
+     Brain-profile computation, Blade PDF generation                                             Contact, corporate enquiry, booking, newsletter
+  + Brain Connect (Buddy)                                                                   → Shop Grid + Product Pages
+     Comparison requests, accept/reject, results side-by-side                                    Commerce phase
+  + Member Content                                                                          → Super Admin User 360 View
+     Careers, tips, events, jobs, internships, scholarships                                      Plan, payment, assessment, report, brain scores per user
+  + Stripe Cashier Checkout                                                                 → Bulk Corporate Code Generator
+     Webhook, success/cancel, entitlement grants                                                 Seat-limited batch codes with email dispatch
+  + Entitlements Middleware
+     ValidatePackage, RequirePaidPackage gates
+  + Admin CRUD Panel
+     Events, careers, content management
+07 — PHASE TIMELINE
+15–23 Working Days · 7 Phases · 1 Developer
+    P H A S E 1 · 0.5 – 1 DAY
+    Pricing Rebuild + Pay-First Flow + Post-Payment Email
+    Flip PAYMENTS_DRIVER=cashier and FUNNEL_MODE=pay_first. Update config/packages.php to one-time prices. Rebuild pricing.blade.php. Wire credentials email post-
+    payment. Remove free plan.
+      PHASE 1       QUICK WIN        STRIPE
+    F O U N DAT I O N · 1 – 2 DAYS
+    Shared Layout + Component Library + Cleanup
+    layouts/public.blade.php — header, footer, nav. Nunito font, coral/gold/green tokens. Delete 12 stale dashboard backup views and QuestionsController copy.php.
+      FOUNDATION         CSS TOKENS
+    P H A S E 2 · 2 – 3 DAYS
+    Forms + Data Capture (4 forms, 4 tables, emails to staff)
+    Contact, Corporate Enquiry, Booking Request, Newsletter — each saves to DB and emails info@limitlessbrain.com.
+      PHASE 2       DATABASE
+    M A R K E T I N G · 5 – 8 DAYS
+    14 Public Pages — Faithful Blade Rebuild (Biggest Phase)
+    Home, Quest, Evolve, Summit, LBA, Brain Connect, BPB, About, Science, Our Method, Neurodivergence, Contact, Corporate, Booking, Privacy. Screenshot of live page →
+    build in Blade → diff before sign-off.
+      BIGGEST PHASE          14 PAGES
+    C O M M E R C E · 2 – 3 DAYS
+    Shop Grid + Product Pages
+    Product listing grid + individual detail pages, wired to existing Stripe Cashier checkout.
+      COMMERCE         STRIPE
+    S U P E R A D M I N · 2 – 3 DAYS
+    User 360 + Transactions + Bulk Code Generator
+    /admin/users/{id}/360 — plan, payment, assessment, brain scores, PDF link. POST /admin/corporate/generate — creates batch code, emails corporate contact.
+      ADMIN       CORPORATE
+    D E C O U P L I N G · 2 – 3 DAYS
+    Retire WordPress Bridge — Native DB Cutover
+    Remove routes/api.php WP-sync endpoints, WP SSO bridge, wp_users mirror. Split web.php into public.php / member.php / commerce.php. Full regression test before
+    go-live.
+      FINAL PHASE        RISKY
+
+
+
+
+DecodeMyBrain®                                                                     DMB-2026-DEL-01 · 21 June 2026                               Page 5
+app.decodemybrain.com · info@limitlessbrain.com                                                                                                 Build Plan · Phase Timeline
+                                         CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT
+08 — SUPER ADMIN DASHBOARD
+Full Visibility — Every User, Every Payment, Every Report
+                                                            Super Admin · app.decodemybrain.com/admin
+       NAVIGATION
+                                       342              $8,940                    289                     150
+                                      Total Users         Revenue MTD           Reports Done             Corp Seats
+            Users
+         Transactions                 +14 this week     +22% vs last month      84% completion         97 used · 53 left
+         Test Reports               USER 360 — Haritha Shah                                                                              BULK CODE GENERATOR
+         Brain Scores               Program EVOLVE (15–18)                                                                       Company Name
+      Corporate Batches             Payment $499 · 12 Jun 2026 · Stripe confirmed                                                                  Sahil Corp
+        Content CRUD                Assessment Completed · 13 Jun 2026                                                           Number of Seats
+                                    Report     Download PDF →                                                                                         50
+                                    BRAIN SCORES
+                                    Analytical                                         80%                                       Contact Email
+                                    Creative                                           65%                                                       sahil@corp.com
+                                    Emotional                                          87%
+                                    Practical                                          73%                                                Generate Batch Code
+
+09 — ROUTES SUMMARY
+  Public Pages (GET)                                          Form POSTs                                                   Super Admin
+  /   /quest   /evolve    /summit                             POST /contact                                                GET /admin/users
+  /limitless-brain-academy                                    POST /enquire-corporate                                      GET /admin/users/{id}/360
+  /brain-connect                                              POST /booking/request                                        GET /admin/transactions
+  /about    /science    /our-method                           POST /newsletter/subscribe                                   GET /admin/reports
+  /neurodivergence                                                                                                         GET /admin/corporate
+  /contact     /booking                                       Each: validate → save DB                                     POST /admin/corporate/generate
+  /enquire-about-corporate                                    → email info@limitlessbrain.com
+  /privacy-policy      /pricing                                                                                            Remove: /api/update-package-status
+                                                                                                                           Remove: WP SSO bridge routes
+
+
+
+
+DecodeMyBrain®                                                                        DMB-2026-DEL-01 · 21 June 2026                                        Page 6
+app.decodemybrain.com · info@limitlessbrain.com                                                                                                             Super Admin + Routes
+                                          CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT
+10 — TECH STACK + DESIGN TOKENS
+What Powers DecodeMyBrain After Rebuild
+  Application Stack                                                                       Design Tokens
+    Framework               Laravel 10                                                           Coral                Gold                Green               Navy
+    Database                MySQL — native (no wp_* tables)                                   #E8735A             #C9A84C             #4CAF50              #1C2B4A
+                                                                                            CTAs · Headings       Accent · Tags     Success · Done         Body · Nav
+    Frontend                Blade templates — no JSON API
+                                                                                          Font: Nunito (Google Fonts). No Elementor or WordPress CSS carried
+    Payments                Stripe Cashier — one-time                                     forward. Faithful screenshot-diff per page before sign-off.
+    Email                   info@limitlessbrain.com
+    PDF                     Existing Blade PDF engine
+    Hosting                 app.decodemybrain.com (VPS)
+
+11 — WHAT GETS REMOVED
+Cutting the WordPress Cord — Final Phase
+  ITEM                                                               ACTION               TIMING               REASON
+  routes/api.php       WP-sync endpoints                             REMOVE               Decoupling           Dead once native auth active
+  WordPress SSO / login bridge routes                                REMOVE               Decoupling           Replaced by native auth + Cashier
+   wp_users mirror + wp_user_id column                               REMOVE               Final step           Native DB is source of truth
+  Free plan / free tier UI                                           REMOVE               Phase 1              Client decision — no free plan
+  BEGINNING / GOLD / PLATINUM sub-packages                           COLLAPSE             Phase 1              Simplified to 1 price per program
+  12 stale dashboard backup .blade.php files                         DELETE               Foundation           Clutter — active file is dashboard.blade.php
+  QuestionsController copy.php                                       DELETE               Foundation           Dead duplicate file
+  Testimonials, team, blog, resources pages                          DROP                 —                    Out of scope by client decision
+
+12 — OPEN QUESTIONS BEFORE BUILD STARTS
+5 Client Decisions Needed
+ 1 Final price per program
+   Config has Deep Dive $499 and Guided F&F $999. Confirm final one-time price for Quest, Evolve, and Summit individually. Needed for config/packages.php and .env
+      Stripe price IDs.
+ 2 Stripe live credentials
+   Currently sandbox-only. Client to share live Stripe account so live price IDs can be set before any real transactions.
+ 3 Corporate  batch code format
+   Alphanumeric? Length? Expiry by date or seat count only? E.g. CORP-7X4K9 format to be confirmed.
+ 4 Reference    illustration folder per page
+   Client to provide design reference assets per public page as the build spec. This is the biggest variable in the Marketing phase estimate (5–8 days).
+ 5 Under-12   age handling
+   Quest starts at 12. What happens if DOB shows under 12 — block with message, redirect to waiting list, or allow parent registration?
+
+
+
+
+DecodeMyBrain®                                                              DMB-2026-DEL-01 · 21 June 2026                                Page 7
+app.decodemybrain.com · info@limitlessbrain.com                                                                                           Stack · Removals · Open Questions
+                          CONFIDENTIAL — DECODEMYBRAIN® — INTERNAL PLANNING DOCUMENT — DO NOT DISTRIBUTE
+

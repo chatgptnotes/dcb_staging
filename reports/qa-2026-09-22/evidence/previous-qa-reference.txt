@@ -1,0 +1,40 @@
+  ⌁     DecodeMyBrain
+
+
+
+Targeted QA Validation
+Validation date: 3 September 2026
+
+
+
+   PASS — Targeted validation complete
+
+
+
+Summary
+The registration and email-verification updates have passed targeted quality validation.
+
+
+Validated journeys
+✓ Account registration and field validation
+
+✓ Mobile-number validation for supported regions
+
+✓ Email verification-code creation and confirmation
+
+✓ Account sign-in after registration
+
+✓ Assessment selection and eligible checkout continuation
+
+✓ Age-eligibility checks
+
+
+Result
+The tested registration and email-verification journeys completed successfully.
+
+
+
+
+This report covers the targeted registration and email-verification changes. It is not a full product release
+certification.
+

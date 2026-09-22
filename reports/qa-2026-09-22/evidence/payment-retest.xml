@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="/Users/murali/Desktop/Project/live projects/dcb_staging/laravel-app/phpunit.xml" tests="1" assertions="2" errors="0" failures="0" skipped="0" time="0.371826">
+    <testsuite name="Feature" tests="1" assertions="2" errors="0" failures="0" skipped="0" time="0.371826">
+      <testsuite name="Tests\Feature\StripeWebhookEntitlementTest" file="/Users/murali/Desktop/Project/live projects/dcb_staging/laravel-app/tests/Feature/StripeWebhookEntitlementTest.php" tests="1" assertions="2" errors="0" failures="0" skipped="0" time="0.371826">
+        <testcase name="test_paid_checkout_is_recorded_once_with_customer_and_package" file="/Users/murali/Desktop/Project/live projects/dcb_staging/laravel-app/tests/Feature/StripeWebhookEntitlementTest.php" line="116" class="Tests\Feature\StripeWebhookEntitlementTest" classname="Tests.Feature.StripeWebhookEntitlementTest" assertions="2" time="0.371826"/>
+      </testsuite>
+    </testsuite>
+  </testsuite>
+</testsuites>

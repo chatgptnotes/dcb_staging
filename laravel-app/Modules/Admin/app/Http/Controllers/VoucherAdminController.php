@@ -14,6 +14,7 @@ use App\Models\OrganizationSeat;
 use App\Models\PricingPackage;
 use App\Models\Voucher;
 use App\Services\Billing\OrganizationSeatService;
+use App\Services\Billing\OrganizationInvoiceSender;
 use App\Services\Billing\OrganizationCodeService;
 use App\Services\Billing\PackageCatalog;
 use App\Services\Billing\VoucherService;
@@ -322,13 +323,13 @@ class VoucherAdminController extends Controller
 
         if ($request->boolean('payment_received')) {
             try {
-                [, $code] = $this->activateQuote($quote->id, $seats, $codes);
+                [$quote, $code] = $this->activateQuote($quote->id, $seats, $codes);
                 $response = redirect('admin/enterprise-codes')
                     ->with('success', 'Deal saved. Payment received, seats allocated, and the enterprise code is active.');
                 if ($code) {
                     $response->with('organization_code', $code);
                 }
-                return $response;
+                return $this->withInvoiceDelivery($response, $quote);
             } catch (RuntimeException $e) {
                 return redirect('admin/enterprise-codes')
                     ->with('fail', 'Deal was saved, but payment could not be activated: '.$e->getMessage());
@@ -383,6 +384,31 @@ class VoucherAdminController extends Controller
         );
         if ($code) {
             $response->with('organization_code', $code);
+        }
+        return $this->withInvoiceDelivery($response, $quote);
+    }
+
+    public function sendQuoteInvoice(int $id): RedirectResponse
+    {
+        $quote = DB::transaction(function () use ($id) {
+            $quote = OrganizationQuote::lockForUpdate()->findOrFail($id);
+            app(OrganizationInvoiceSender::class)->prepare($quote);
+            return $quote;
+        });
+        if ($quote->status !== 'paid') {
+            return back()->with('fail', 'Record payment before sending an invoice.');
+        }
+        return $this->withInvoiceDelivery(back(), $quote);
+    }
+
+    private function withInvoiceDelivery(RedirectResponse $response, OrganizationQuote $quote): RedirectResponse
+    {
+        try {
+            app(OrganizationInvoiceSender::class)->send($quote);
+            $response->with('success', 'Payment recorded. Organisation access is active. The invoice email has been sent to '.$quote->invoice_data['email'].'.');
+        } catch (\Throwable $e) {
+            report($e);
+            $response->with('fail', 'Payment is recorded and organisation access is active, but the invoice email could not be sent. Retry from the agreement page.');
         }
         return $response;
     }
@@ -619,6 +645,7 @@ class VoucherAdminController extends Controller
             if ($quote->status !== 'paid') {
                 $quote->update(['status' => 'paid', 'paid_at' => now()]);
             }
+            app(OrganizationInvoiceSender::class)->prepare($quote);
             $seats->allocatePaidSeats($quote);
             $quote->refresh();
 
