@@ -9,6 +9,9 @@ use App\Models\DimensionalQuestionAnswers;
 use App\Models\QuestionAnswerMain;
 use App\Models\QuestionAnswers;
 use App\Services\AssessmentResumeService;
+use App\Models\User;
+use App\Models\WPUsers;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AssessmentResumeTest extends TestCase
@@ -100,8 +103,84 @@ class AssessmentResumeTest extends TestCase
             ->assertSee('Log out');
     }
 
+
+    /** @dataProvider resumeJourneys */
+    public function test_saved_progress_survives_logout_and_native_login(bool $dimensional): void
+    {
+        config(['app.auth_driver' => 'native', 'app.otp_enabled' => false,
+            'packages.funnel' => 'pay_first',
+            'packages.plans.decodemybrain-deep-dive' => ['type' => 'one_time']]);
+        $user = new User();
+        $user->wp_user_id = self::USER_ID;
+        $user->username = 'resume_session_test';
+        $user->email = 'resume-session@example.local';
+        $user->display_name = 'Resume Test';
+        $user->date_of_birth = '1990-01-01';
+        $user->password = Hash::make('ResumeTest#2026');
+        $user->status = 'active';
+        $user->user_role = '2';
+        $user->save();
+        $mirror = new WPUsers();
+        $mirror->user_id = self::USER_ID;
+        $mirror->email = $user->email;
+        $mirror->display_name = $user->display_name;
+        $mirror->date_of_birth = $user->date_of_birth;
+        $mirror->package = 'decodemybrain-deep-dive';
+        $mirror->save();
+
+        $standard = new QuestionAnswerMain();
+        $standard->user_id = self::USER_ID;
+        if ($dimensional) {
+            $standard->status = 'complete';
+        }
+        $standard->save();
+        $attempt = $standard;
+        if ($dimensional) {
+            $attempt = new DimensionalQuestionAnswerMain();
+            $attempt->user_id = self::USER_ID;
+            $attempt->save();
+            $answer = new DimensionalQuestionAnswers();
+            $answer->user_id = self::USER_ID;
+            $answer->question_no = 6;
+            $answer->question_id = 6;
+            $answer->answer = 'A';
+            $answer->user_type = 'adult';
+            $answer->category = 'analytical';
+        } else {
+            $answer = new QuestionAnswers();
+            $answer->answer_main_id = $attempt->id;
+            $answer->question_no = 4;
+            $answer->question_id = 4;
+            $answer->first_answer = 'A';
+            $answer->second_answer = 'B';
+            $answer->third_answer = 'C';
+            $answer->forth_answer = 'D';
+        }
+        $answer->save();
+        $key = $dimensional ? 'd_answer_main_id' : 'answer_main_id';
+        $route = $dimensional ? '/questions/d7' : '/questions/q5';
+        $this->withSession(['user_id' => self::USER_ID, 'user_dob' => '1990-01-01', $key => $attempt->id])
+            ->post('/logout')->assertRedirect('/sign-in')->assertSessionMissing('user_id')->assertSessionMissing($key);
+        $this->get('/assessment/resume')->assertRedirect('/sign-in');
+        $this->assertNotNull($answer->fresh());
+        $this->post('/sign-in', ['user_name' => $user->email, 'password' => 'ResumeTest#2026'])
+            ->assertRedirect('/')->assertSessionHas('user_id', self::USER_ID);
+        $this->get('/')->assertOk()->assertSee('Resume assessment');
+        $this->get('/assessment/resume')->assertRedirect($route)->assertSessionHas($key, $attempt->id);
+        $this->get($route)->assertOk();
+        $this->assertNotNull($answer->fresh());
+        $this->assertSame(self::USER_ID, (int) $attempt->fresh()->user_id);
+    }
+
+    public static function resumeJourneys(): array
+    {
+        return ['standard assessment' => [false], 'dimensional assessment' => [true]];
+    }
+
     private function cleanup(): void
     {
+        User::where('email', 'resume-session@example.local')->delete();
+        WPUsers::where('user_id', self::USER_ID)->delete();
         $attemptIds = QuestionAnswerMain::where('user_id', self::USER_ID)->pluck('id');
         QuestionAnswers::whereIn('answer_main_id', $attemptIds)->delete();
         QuestionAnswerMain::where('user_id', self::USER_ID)->delete();
