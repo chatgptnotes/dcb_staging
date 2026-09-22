@@ -31,7 +31,7 @@ class VoucherController extends Controller
 
     public function payMyself(): RedirectResponse
     {
-        session()->forget(['intended_package', 'new_purchase_flow']);
+        session()->forget(['pending_organization_code', 'pending_voucher_id', 'pending_checkout_voucher_id', 'intended_package', 'new_purchase_flow']);
         return redirect()->route('public.plans');
     }
 
@@ -45,6 +45,7 @@ class VoucherController extends Controller
         try {
             if ($voucher) {
                 $this->vouchers->validateForPackage($voucher, $voucher->package_slug);
+                session()->forget(['pending_organization_code', 'pending_checkout_voucher_id', 'new_purchase_flow']);
                 session([
                     'pending_voucher_id' => $voucher->id,
                     'intended_package' => $voucher->package_slug,
@@ -55,6 +56,7 @@ class VoucherController extends Controller
             }
 
             $this->organizationCodes->validateAvailability($code);
+            session()->forget(['pending_voucher_id', 'pending_checkout_voucher_id', 'intended_package', 'new_purchase_flow']);
             session(['pending_organization_code' => Crypt::encryptString($code)]);
             return session('user_id')
                 ? redirect()->route('access.code.complete')

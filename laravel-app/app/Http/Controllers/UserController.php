@@ -834,6 +834,12 @@ private function validateRegistrationPhone(Request $request): array
 
 private function rememberIntendedPackage(Request $request): void
 {
+    // An organisation code owns the signup flow, including on old open forms.
+    if (session('pending_organization_code')) {
+        session()->forget(['intended_package', 'new_purchase_flow']);
+        return;
+    }
+
     $intendedPackage = (string) ($request->input('intended_package') ?: $request->query('intended_package', ''));
     if ($intendedPackage === '') {
         return;
@@ -847,6 +853,10 @@ private function rememberIntendedPackage(Request $request): void
 
 private function rememberPurchaseFlow(Request $request): void
 {
+    if (session('pending_organization_code')) {
+        return;
+    }
+
     if ((string) $request->input('purchase_flow', $request->query('purchase_flow', '')) === '1') {
         session(['new_purchase_flow' => true]);
     }
@@ -855,6 +865,10 @@ private function rememberPurchaseFlow(Request $request): void
 /** Reject an age-ineligible selected individual plan before creating an account. */
 private function validateIntendedPackageAge(string $dateOfBirth): void
 {
+    if (session('pending_organization_code')) {
+        return;
+    }
+
     $package = (string) session('intended_package');
     if ($package === '') {
         return;
