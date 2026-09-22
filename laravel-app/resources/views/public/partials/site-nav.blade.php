@@ -17,7 +17,7 @@
       @if($resumeRoute ?? null)<a class="btn dark" href="{{ route('assessment.resume') }}">Resume assessment</a>@else<a class="btn dark" href="{{ url('logout') }}">Log out</a>@endif
       @else
       <a class="btn" href="{{ url('sign-in') }}">Log in</a>
-      <a class="btn dark" href="{{ url('sign-up') }}">REGISTER</a>
+      <a class="btn dark" href="{{ route('access.choice') }}">REGISTER</a>
       @endif
       <button class="mobile-menu" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="landing-navigation" data-menu-toggle>☰</button>
     </div>
