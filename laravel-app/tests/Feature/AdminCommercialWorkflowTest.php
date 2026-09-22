@@ -9,6 +9,7 @@ use App\Models\Organization;
 use App\Models\OrganizationQuote;
 use App\Mail\OrganizationAccessCodeMail;
 use App\Mail\OrganizationCodeUsageMail;
+use App\Mail\OrganizationInvoiceMail;
 use App\Models\OrganizationSeat;
 use App\Models\PricingPackage;
 use App\Models\User;
@@ -370,6 +371,7 @@ class AdminCommercialWorkflowTest extends TestCase
 
     public function test_payment_toggle_on_a_new_deal_activates_seats_and_the_enterprise_code_after_save(): void
     {
+        Mail::fake();
         $enquiry = OrganizationEnquiry::create([
             'organization_name' => 'Toggle School',
             'group_size' => 3,
@@ -394,6 +396,8 @@ class AdminCommercialWorkflowTest extends TestCase
         $quote = OrganizationQuote::where('organization_enquiry_id', $enquiry->id)->firstOrFail();
         $this->assertSame('paid', $quote->status);
         $this->assertSame(2900, $quote->total_amount_minor);
+        Mail::assertSent(OrganizationInvoiceMail::class, fn ($mail) => $mail->hasTo('toggle-school@example.local') && $mail->invoice['amount'] === 2900);
+        $this->assertNotNull($quote->invoice_sent_at);
         $this->assertSame(0, $quote->discount_amount_minor);
         $this->assertSame('one_time', $quote->billing_type);
         $this->assertSame('permanent', $quote->access_term);
@@ -501,6 +505,99 @@ class AdminCommercialWorkflowTest extends TestCase
         $this->assertTrue(strpos($content, '>Agreements<') < strpos($content, '>Enterprise codes<'));
     }
 
+
+    public function test_existing_agreement_payment_emails_one_pdf_invoice_for_the_agreed_total(): void
+    {
+        Mail::fake();
+        $quote = $this->invoiceQuote();
+        $this->actingAs($this->admin('invoice-admin@example.local'));
+        $url = '/admin/organization-quotes/'.$quote->id.'/mark-paid';
+        $this->post($url)->assertRedirect('/admin/enterprise-codes');
+        $this->post($url)->assertRedirect('/admin/enterprise-codes');
+        Mail::assertSent(OrganizationInvoiceMail::class, 1);
+        Mail::assertSent(OrganizationInvoiceMail::class, function ($mail) {
+            $this->assertTrue($mail->hasTo('invoice-contact@example.local'));
+            $this->assertSame(5000000, $mail->invoice['amount']);
+            $html = $mail->render();
+            $this->assertStringContainsString('$50,000.00', $html);
+            $this->assertStringContainsString('USD', $html);
+            $this->assertStringContainsString('Invoice School', $html);
+            $this->assertStringContainsString('Balance due', $html);
+            $this->assertStringNotContainsString('Private finance notes', $html);
+            $this->assertStringStartsWith('%PDF', $mail->rawAttachments[0]['data']);
+            return true;
+        });
+        $this->assertNotNull($quote->fresh()->invoice_sent_at);
+        $this->assertSame(2, $quote->seats()->count());
+        $this->get('/admin/organization-quotes/'.$quote->id)->assertOk()->assertSee('Invoice emailed to');
+    }
+
+    public function test_invoice_failure_preserves_paid_agreement_and_retries_original_details(): void
+    {
+        Mail::fake();
+        $fake = Mail::getFacadeRoot();
+        Mail::shouldReceive('to')->once()->andThrow(new RuntimeException('Mail unavailable'));
+        $quote = $this->invoiceQuote();
+        $this->actingAs($this->admin('invoice-retry-admin@example.local'))
+            ->post('/admin/organization-quotes/'.$quote->id.'/mark-paid')
+            ->assertSessionHas('fail');
+        $quote->refresh();
+        $this->assertSame('paid', $quote->status);
+        $this->assertTrue($quote->shared_code_enabled);
+        $this->assertSame(2, $quote->seats()->count());
+        $this->assertNull($quote->invoice_sent_at);
+        $quote->organization->update(['contact_email' => 'changed@example.local']);
+        $quote->update(['total_amount_minor' => 123]);
+        Mail::swap($fake);
+        $this->artisan('billing:send-pending-organization-invoices')->assertSuccessful();
+        $this->artisan('billing:send-pending-organization-invoices')->assertSuccessful();
+        Mail::assertSent(OrganizationInvoiceMail::class, 1);
+        Mail::assertSent(OrganizationInvoiceMail::class, fn ($mail) => $mail->hasTo('invoice-contact@example.local') && $mail->invoice['amount'] === 5000000);
+        $this->assertNotNull($quote->fresh()->invoice_sent_at);
+    }
+
+    public function test_historical_paid_agreement_requires_explicit_invoice_send(): void
+    {
+        Mail::fake();
+        $quote = $this->invoiceQuote();
+        $quote->update(['status' => 'paid', 'paid_at' => now()]);
+        $this->artisan('billing:send-pending-organization-invoices')->assertSuccessful();
+        Mail::assertNotSent(OrganizationInvoiceMail::class);
+        $this->actingAs($this->admin('invoice-history-admin@example.local'));
+        $url = '/admin/organization-quotes/'.$quote->id.'/invoice';
+        $this->post($url)->assertSessionHas('success');
+        $this->post($url)->assertSessionHas('success');
+        Mail::assertSent(OrganizationInvoiceMail::class, 1);
+        $this->assertNotNull($quote->fresh()->invoice_sent_at);
+    }
+
+    public function test_unpaid_agreement_cannot_send_an_invoice_and_guests_cannot_send(): void
+    {
+        Mail::fake();
+        $quote = $this->invoiceQuote();
+        $url = '/admin/organization-quotes/'.$quote->id.'/invoice';
+        $this->post($url)->assertRedirect();
+        $this->assertNull($quote->fresh()->invoice_data);
+        $this->actingAs($this->admin('invoice-unpaid-admin@example.local'))
+            ->post($url)->assertSessionHas('fail');
+        Mail::assertNotSent(OrganizationInvoiceMail::class);
+        $this->assertNull($quote->fresh()->invoice_data);
+    }
+
+    private function invoiceQuote(): OrganizationQuote
+    {
+        $organization = Organization::create([
+            'name' => 'Invoice School', 'contact_name' => 'Invoice Contact',
+            'contact_email' => 'invoice-contact@example.local',
+        ]);
+        return OrganizationQuote::create([
+            'organization_id' => $organization->id, 'quote_number' => 'TEST-INVOICE-AGREEMENT',
+            'package_slug' => 'decodemybrain-deep-dive', 'seat_count' => 2,
+            'unit_amount_minor' => 5000000, 'total_amount_minor' => 5000000,
+            'currency' => 'usd', 'status' => 'draft', 'internal_notes' => 'Private finance notes',
+        ]);
+    }
+
     private function admin(string $email): User
     {
         $admin = new User();
@@ -519,6 +616,10 @@ class AdminCommercialWorkflowTest extends TestCase
         OrganizationEnquiry::where('contact_email', 'enquiry-deal@example.local')->delete();
         PricingPackage::where('slug', 'admin-price-test')->delete();
         User::whereIn('email', [
+            'invoice-admin@example.local',
+            'invoice-retry-admin@example.local',
+            'invoice-history-admin@example.local',
+            'invoice-unpaid-admin@example.local',
             'pricing-admin@example.local',
             'enquiry-admin@example.local',
             'enquiry-deal-admin@example.local',

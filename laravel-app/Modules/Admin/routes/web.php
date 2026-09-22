@@ -55,6 +55,7 @@ Route::prefix('admin')->group(function() {
     Route::post('/organization-quotes', [VoucherAdminController::class, 'storeQuote'])->middleware('authAdmin');
     Route::get('/organization-quotes/{id}', [VoucherAdminController::class, 'showQuote'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/mark-paid', [VoucherAdminController::class, 'markQuotePaid'])->middleware('authAdmin');
+    Route::post('/organization-quotes/{id}/invoice', [VoucherAdminController::class, 'sendQuoteInvoice'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code', [VoucherAdminController::class, 'createSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/rotate', [VoucherAdminController::class, 'rotateSharedCode'])->middleware('authAdmin');
     Route::post('/organization-quotes/{id}/shared-code/send-email', [VoucherAdminController::class, 'sendSharedCodeEmail'])->middleware('authAdmin');
