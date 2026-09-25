@@ -90,17 +90,65 @@ class AssessmentResumeTest extends TestCase
         $this->assertNull(app(AssessmentResumeService::class)->resumeRoute(self::USER_ID, '2014-01-01'));
     }
 
-    public function test_landing_shows_resume_only_for_a_signed_in_user_with_saved_progress(): void
+    /** @dataProvider navigationStates */
+    public function test_public_header_reflects_paid_assessment_progress(string $state, bool $paid, string $label): void
     {
-        $attempt = new QuestionAnswerMain();
-        $attempt->user_id = self::USER_ID;
-        $attempt->save();
+        config(['packages.funnel' => 'pay_first',
+            'packages.plans.decodemybrain-deep-dive' => ['type' => 'one_time']]);
+        $mirror = new WPUsers();
+        $mirror->user_id = self::USER_ID;
+        $mirror->email = 'resume-session@example.local';
+        $mirror->date_of_birth = '2014-01-01';
+        $mirror->package = $paid ? 'decodemybrain-deep-dive' : null;
+        $mirror->save();
 
-        $this->withSession(['user_id' => self::USER_ID, 'user_dob' => '1990-01-01'])
-            ->get('/')
-            ->assertOk()
-            ->assertSee('Resume assessment')
-            ->assertSee('Log out');
+        if ($state !== 'new') {
+            $attempt = new QuestionAnswerMain();
+            $attempt->user_id = self::USER_ID;
+            if ($state === 'complete') {
+                $attempt->status = 'complete';
+            }
+            $attempt->save();
+            if ($state === 'answered') {
+                $answer = new QuestionAnswers();
+                $answer->answer_main_id = $attempt->id;
+                $answer->question_no = 1;
+                $answer->question_id = 1;
+                $answer->first_answer = 'A';
+                $answer->second_answer = 'B';
+                $answer->third_answer = 'C';
+                $answer->forth_answer = 'D';
+                $answer->save();
+            }
+        }
+
+        $this->withSession(['user_id' => self::USER_ID, 'user_dob' => '2014-01-01']);
+        foreach (['/', '/science'] as $path) {
+            $response = $this->get($path)->assertOk();
+            preg_match('/<header class="site-nav">(.*?)<\/header>/s', $response->getContent(), $matches);
+            $header = $matches[1];
+            $this->assertSame(2, substr_count($header, '>'.$label.'</a>'), 'Desktop and mobile actions match');
+            $this->assertSame(2, substr_count($header, '>Log out</a>'));
+            foreach (array_diff(['Start assessment', 'Resume assessment', 'Dashboard'], [$label]) as $other) {
+                $this->assertStringNotContainsString('>'.$other.'</a>', $header);
+            }
+        }
+        if ($paid && in_array($state, ['empty', 'answered'], true)) {
+            $this->get('/assessment/resume')->assertRedirect($state === 'empty' ? '/questions/q1' : '/questions/q2')
+                ->assertSessionHas('answer_main_id', $attempt->id);
+        }
+    }
+
+    public static function navigationStates(): array
+    {
+        return [
+            'paid without attempt' => ['new', true, 'Start assessment'],
+            'paid empty attempt' => ['empty', true, 'Start assessment'],
+            'paid saved answer' => ['answered', true, 'Resume assessment'],
+            'paid completed' => ['complete', true, 'Dashboard'],
+            'unpaid without attempt' => ['new', false, 'Dashboard'],
+            'unpaid saved answer' => ['answered', false, 'Dashboard'],
+        ];
     }
 
 

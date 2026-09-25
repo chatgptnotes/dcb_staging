@@ -28,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\View::composer('public.partials.site-nav', function (\Illuminate\View\View $view) {
+            if (session('user_id')) {
+                $view->with('assessmentAction', app(\App\Services\AssessmentResumeService::class)
+                    ->navigationAction((int) session('user_id')));
+            }
+        });
+
         \Illuminate\Support\Facades\View::composer('public.program', function (\Illuminate\View\View $view) {
             $packages = \App\Models\PricingPackage::where('is_visible', true)->orderBy('sort_order')->get();
             $program = $view->getData()['program'];

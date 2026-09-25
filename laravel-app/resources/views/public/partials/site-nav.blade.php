@@ -24,12 +24,12 @@
       <a href="{{ route('public.plans') }}">Pricing</a>
       <a class="organization-link" href="{{ route('organization.enquiry.create') }}">For organizations</a>
 
-      @if(session('user_id'))<a class="mobile-account" href="{{ url('dashboard') }}">Dashboard</a><a class="mobile-account" href="{{ url('logout') }}">Log out</a>@else<a class="mobile-account" href="{{ url('sign-in') }}">Log in</a>@endif
+      @if(session('user_id'))<a class="mobile-account" href="{{ $assessmentAction['url'] }}">{{ $assessmentAction['label'] }}</a><a class="mobile-account" href="{{ url('logout') }}">Log out</a>@else<a class="mobile-account" href="{{ url('sign-in') }}">Log in</a>@endif
     </nav>
     <div class="nav-actions">
       @if(session('user_id'))
-      <a class="btn" href="{{ url('dashboard') }}">Dashboard</a>
-      @if($resumeRoute ?? null)<a class="btn dark" href="{{ route('assessment.resume') }}">Resume assessment</a>@else<a class="btn dark" href="{{ url('logout') }}">Log out</a>@endif
+      <a class="btn" href="{{ $assessmentAction['url'] }}">{{ $assessmentAction['label'] }}</a>
+      <a class="btn dark" href="{{ url('logout') }}">Log out</a>
       @else
       <a class="btn" href="{{ url('sign-in') }}">Log in</a>
       <a class="btn dark" href="{{ route('access.choice') }}">REGISTER</a>

@@ -13,6 +13,34 @@ use Carbon\Carbon;
 /** Restores unfinished assessment state from the answer records in MySQL. */
 final class AssessmentResumeService
 {
+    /** The public header action, based on persisted entitlement and progress. */
+    public function navigationAction(int $userId): array
+    {
+        $dashboard = ['label' => 'Dashboard', 'url' => url('dashboard')];
+        $user = \App\Models\WPUsers::where('user_id', $userId)->first();
+        if (! $user || (config('packages.funnel') === 'pay_first'
+            && ! app(\App\Services\Billing\PackageCatalog::class)->isPaid($user->package))) {
+            return $dashboard;
+        }
+
+        if ($attempt = $this->incompleteStandardAttempt($userId)) {
+            $hasAnswers = QuestionAnswers::where('answer_main_id', $attempt->id)->exists();
+
+            return ['label' => $hasAnswers ? 'Resume assessment' : 'Start assessment',
+                'url' => route('assessment.resume')];
+        }
+
+        if ($this->resumeRoute($userId, $user->date_of_birth)) {
+            return ['label' => 'Resume assessment', 'url' => route('assessment.resume')];
+        }
+
+        if ($user->brain_profile_id || QuestionAnswerMain::where('user_id', $userId)->where('status', 'complete')->exists()) {
+            return $dashboard;
+        }
+
+        return ['label' => 'Start assessment', 'url' => url('questions/q1')];
+    }
+
     public function resumeRoute(int $userId, ?string $dateOfBirth): ?string
     {
         if ($attempt = $this->incompleteStandardAttempt($userId)) {
