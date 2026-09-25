@@ -68,9 +68,9 @@ Route::match(['get', 'post'],'/questions/game/game-3', [QuestionsController::cla
 Route::match(['get', 'post'],'/questions/game/game-4', [QuestionsController::class, 'game_4'])->middleware('requirePaid');
 Route::match(['get', 'post'],'/questions/game/game-5', [QuestionsController::class, 'game_5'])->middleware('requirePaid');
 Route::match(['get', 'post'],'/sign-in', [UserController::class, 'sign_in']);
-Route::match(['get', 'post'],'/sign-up', [UserController::class, 'sign_up'])->middleware('throttle:20,1');
+Route::match(['get', 'post'],'/sign-up', [UserController::class, 'sign_up'])->middleware(['throttle:20,1', \App\Http\Middleware\PreventAuthFormCaching::class]);
 // Email-OTP steps (active when OTP_ENABLED): registration verification only.
-Route::match(['get', 'post'],'/verify-email-otp', [UserController::class, 'verifyEmailOtp'])->middleware('throttle:20,1');
+Route::match(['get', 'post'],'/verify-email-otp', [UserController::class, 'verifyEmailOtp'])->middleware(['throttle:20,1', \App\Http\Middleware\PreventAuthFormCaching::class]);
 Route::post('/resend-otp', [UserController::class, 'resendOtp'])->middleware('throttle:6,1');
 Route::match(['get', 'post'],'/logout', [UserController::class, 'logout']);
 Route::match(['get', 'post'],'/forgot-password', [UserController::class, 'forgot_password'])->middleware('throttle:20,1');
