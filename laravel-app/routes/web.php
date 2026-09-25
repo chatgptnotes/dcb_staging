@@ -41,6 +41,15 @@ $router->aliasMiddleware('requirePaid', RequirePaidPackage::class);
 
 Route::get('/', [MainController::class, 'landing'])->name('landing');
 Route::view('/science', 'public.science')->name('public.science');
+Route::view('/our-method', 'public.science', ['sciencePage' => 'method'])->name('public.method');
+
+// Public program details linked from the landing-page Read More buttons.
+foreach (['quest', 'evolve', 'summit'] as $program) {
+    Route::view('/'.$program, 'public.program', [
+        'program' => $program,
+    ])->name('public.program.'.$program);
+}
+
 Route::match(['get', 'post'],'/intro', [QuestionsController::class, 'intro'])->middleware('requirePaid');
 Route::match(['get', 'post'],'/questions/{question}', [QuestionsController::class, 'question'])->middleware('authCustomer')->middleware('requirePaid');
 Route::match(['get', 'post'],'/childquestions/{question}', [QuestionsController::class, 'childquestions'])->middleware('requirePaid');

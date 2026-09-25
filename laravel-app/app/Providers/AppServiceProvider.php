@@ -28,7 +28,32 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\View::composer('public.program', function (\Illuminate\View\View $view) {
+            $packages = \App\Models\PricingPackage::where('is_visible', true)->orderBy('sort_order')->get();
+            $program = $view->getData()['program'];
+            $package = $packages->first(fn ($package) => $package->publicProgramKey() === $program);
+            abort_unless($package, 404);
+
+            $view->with([
+                'packages' => $packages,
+                'programTitle' => $package->title,
+                'programAgeLabel' => $package->ageRangeLabel(),
+                'programPackage' => $package,
+            ]);
+        });
+
+        \Illuminate\Support\Facades\View::composer([
+            'public.partials.site-nav',
+            'public.partials.reference-content',
+        ], function (\Illuminate\View\View $view) {
+            // The landing controller already loads the visible catalog. Other
+            // public pages need the same admin-managed labels in their header.
+            $packages = $view->getData()['packages']
+                ?? \App\Models\PricingPackage::where('is_visible', true)->orderBy('sort_order')->get();
+            $view->with('publicPrograms', $packages->filter(
+                fn ($package) => $package->is_visible && $package->publicProgramKey() !== null
+            ));
+        });
     }
 
     /**
