@@ -82,6 +82,17 @@ class PricingPackage extends Model
             : 'Ages ' . $this->minimum_age . '–' . $this->maximum_age;
     }
 
+    /** Public editorial page associated with this stable entitlement slug. */
+    public function publicProgramKey(): ?string
+    {
+        return match ($this->slug) {
+            'decodemybrain-deep-dive' => 'quest',
+            'decodemybrain-guided-friend-and-family-connect' => 'evolve',
+            'small-group' => 'summit',
+            default => null,
+        };
+    }
+
     /**
      * Features stored one-per-line; return as a trimmed array for rendering.
      *

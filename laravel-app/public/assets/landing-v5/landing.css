@@ -427,3 +427,49 @@ a:focus-visible,button:focus-visible{outline:3px solid #111;outline-offset:4px}
 .program-card h3{overflow-wrap:anywhere}
 .program-card .program-art{margin-top:auto}
 .program-card .btn{margin-top:18px}
+
+/* Science navigation works with hover, keyboard and touch. */
+.nav-dropdown{position:relative}
+.nav-dropdown summary{position:relative;display:flex;align-items:center;gap:7px;list-style:none;cursor:pointer}
+.nav-dropdown summary::-webkit-details-marker{display:none}
+.nav-dropdown summary::before{content:"";width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);order:1;margin-top:-3px}
+.nav-dropdown summary.active::after{content:"";position:absolute;left:0;right:0;bottom:-12px;height:3px;border-radius:3px;background:var(--orange)}
+.nav-dropdown summary:focus-visible{outline:2px solid currentColor;outline-offset:6px}
+.nav-submenu{position:absolute;top:100%;left:-18px;min-width:195px;padding:22px 10px 12px;background:#fff;border-radius:0 0 12px 12px;box-shadow:0 12px 24px rgba(0,0,0,.12);z-index:40}
+.nav-links .nav-submenu a{display:block;padding:10px;border-radius:6px;white-space:nowrap;font-size:13px;font-weight:500}
+.nav-links .nav-submenu a:hover,.nav-links .nav-submenu a:focus-visible,.nav-links .nav-submenu a[aria-current=page]{background:var(--cream)}
+.nav-links .nav-submenu a::after{display:none}
+@media(max-width:960px){.nav-dropdown{flex-basis:100%}.nav-dropdown summary{width:max-content}.nav-submenu{position:static;box-shadow:none;padding:12px 0 0 12px;min-width:0}.nav-dropdown summary.active::after{bottom:-5px}}
+
+/* Reference footer shared by the public landing and information pages. */
+.reference-footer{position:relative;color:#0b0b0b;font-family:Arial,Helvetica,sans-serif}
+.reference-footer-wrap{width:min(1150px,90%);margin-inline:auto}
+.reference-footer-main{background:#f6c94c;padding:50px 0 54px}
+.reference-footer-grid{display:grid;grid-template-columns:1.5fr 1fr .85fr;align-items:center;gap:58px}
+.reference-footer-eyebrow{margin:0 0 4px;font-size:22px;font-weight:700;line-height:1.25}
+.reference-footer-welcome h2{margin:0 0 12px;font-size:44px;line-height:1.15;font-weight:800;letter-spacing:0}
+.reference-footer-tagline{margin:0 0 18px;max-width:460px;font-size:22px;line-height:1.25;font-weight:700}
+.reference-footer a{color:inherit;text-decoration:none}
+.reference-footer-cta{display:inline-flex;padding:10px 22px;border-radius:11px;background:#f1935d;font-size:14px;font-weight:700;line-height:1.3;min-height:38px;align-items:center}
+.reference-footer-cta:hover{background:#ed854b}
+.reference-footer-socials{display:flex;gap:16px;margin-top:18px}
+.reference-footer-socials a{display:grid;place-items:center;width:32px;height:32px}
+.reference-footer-socials svg{width:16px;height:16px;fill:currentColor}
+.reference-footer-socials a:last-child svg{fill:none;stroke:currentColor;stroke-width:2}
+.reference-footer-socials .instagram-dot{fill:currentColor;stroke:none}
+.reference-footer-links{display:flex;flex-direction:column;align-items:center;gap:14px;font-size:16px;font-weight:700;text-align:center}
+.reference-footer-links a:hover,.reference-footer-legal nav a:hover{text-decoration:underline;text-underline-offset:4px}
+.reference-footer-art{display:block;width:240px;height:auto;max-width:100%;justify-self:center}
+.reference-footer-bottom{background:#84d6a5;padding:14px 0}
+.reference-footer-legal{display:grid;grid-template-columns:1fr 1.2fr 1.8fr;align-items:center;gap:24px;font-size:14px;font-weight:600}
+.reference-footer-legal nav{display:flex;justify-content:center;gap:16px;flex-wrap:wrap}
+.reference-footer-legal p{margin:0;text-align:right}
+.reference-footer-top{position:absolute;right:36px;bottom:32px;display:grid;place-items:center;width:40px;height:40px;border:2px solid #111;border-radius:4px;background:#fff}
+.reference-footer-top svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.5}
+.reference-footer a:focus-visible{outline:2px solid #111;outline-offset:4px}
+@media(max-width:1000px){.reference-footer-grid{gap:24px;grid-template-columns:1.4fr 1fr .8fr}.reference-footer-welcome h2{font-size:34px}.reference-footer-tagline,.reference-footer-eyebrow{font-size:19px}.reference-footer-legal{grid-template-columns:1fr 1fr}.reference-footer-legal p{grid-column:1/-1;text-align:center}.reference-footer-top{right:12px;bottom:12px}}
+@media(max-width:600px){.reference-footer-main{padding:38px 0}.reference-footer-grid{grid-template-columns:1fr;text-align:center;gap:30px}.reference-footer-tagline{margin-inline:auto}.reference-footer-socials{justify-content:center}.reference-footer-art{width:180px}.reference-footer-legal{display:flex;flex-direction:column;gap:18px;padding-bottom:34px}.reference-footer-legal p{max-width:290px}.reference-footer-legal .logo{justify-content:center}}
+
+.catalog-program-features{padding-left:22px;list-style:disc;text-align:left}
+.program-detail-features{max-width:640px;margin:20px auto 28px}
+.catalog-program-features li{margin-bottom:10px}

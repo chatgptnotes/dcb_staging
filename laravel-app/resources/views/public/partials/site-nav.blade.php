@@ -4,8 +4,23 @@
     </a>
     <nav class="nav-links" id="landing-navigation" aria-label="Main navigation">
       <a @class(['active' => request()->routeIs('landing')]) href="{{ route('landing') }}">Home</a>
-      <a href="{{ route('landing') }}#programs">Programs</a>
-      <a @class(['active' => request()->routeIs('public.science')]) href="{{ route('public.science') }}">Science</a>
+      @if($publicPrograms->isNotEmpty())
+      <details class="nav-dropdown" data-nav-dropdown>
+        <summary @class(['active' => request()->routeIs('public.program.*')])>Programs</summary>
+        <div class="nav-submenu">
+          @foreach($publicPrograms as $programPackage)
+          <a href="{{ route('public.program.'.$programPackage->publicProgramKey()) }}" @if(request()->routeIs('public.program.'.$programPackage->publicProgramKey())) aria-current="page" @endif>{{ $programPackage->title }}</a>
+          @endforeach
+        </div>
+      </details>
+      @endif
+      <details class="nav-dropdown" data-nav-dropdown>
+        <summary @class(['active' => request()->routeIs('public.science', 'public.method')])>Science</summary>
+        <div class="nav-submenu">
+          <a href="{{ route('public.science') }}#science" @if(request()->routeIs('public.science')) aria-current="page" @endif>Science</a>
+          <a href="{{ route('public.method') }}" @if(request()->routeIs('public.method')) aria-current="page" @endif>My Limitless Method</a>
+        </div>
+      </details>
       <a href="{{ route('public.plans') }}">Pricing</a>
       <a class="organization-link" href="{{ route('organization.enquiry.create') }}">For organizations</a>
 
