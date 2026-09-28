@@ -1,0 +1,219 @@
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true                                                    0.01s  
+
+   PASS  Tests\Unit\OtpServiceTest
+  ✓ send stores hashed code and emails it                                0.24s  
+  ✓ correct code verifies and is single use                              0.03s  
+  ✓ wrong code is rejected                                               0.03s  
+  ✓ expired code is rejected                                             0.02s  
+  ✓ too many wrong attempts invalidates                                  0.05s  
+  ✓ purpose is scoped                                                    0.01s  
+
+   PASS  Tests\Unit\PackageCatalogTest
+  ✓ driver and is cashier                                                0.04s  
+  ✓ exists includes free and known plans only                            0.01s  
+  ✓ is subscription reflects type                                        0.01s  
+  ✓ stripe price id lookup                                               0.01s  
+  ✓ slug for price id reverse lookup                                     0.03s  
+  ✓ blank database price does not fall back to config                    0.12s  
+
+   PASS  Tests\Unit\StripePriceManagerTest
+  ✓ valid existing price is reused                                       0.05s  
+  ✓ invalid existing price is replaced                                   0.01s  
+  ✓ billing change creates new price                                     0.01s  
+  ✓ missing stripe key fails before creating price                       0.02s  
+
+   PASS  Tests\Unit\VoucherServiceTest
+  ✓ codes are normalized before hashing                                  0.03s  
+  ✓ normalization rejects non alphanumeric code content                  0.01s  
+
+   PASS  Tests\Unit\WpHashServiceTest
+  ✓ accepts correct password for wp bcrypt hash                          0.15s  
+  ✓ rejects wrong password for wp bcrypt hash                            0.28s  
+  ✓ accepts correct password for phpass hash                             0.01s  
+  ✓ rejects wrong password for phpass hash
+  ✓ accepts plain bcrypt hash                                            0.31s  
+  ✓ rejects malformed hashes
+  ✓ rejects overlong password                                            0.07s  
+  ✓ needs rehash only for wordpress formats                              0.14s  
+
+   PASS  Tests\Feature\AdminCommercialWorkflowTest
+  ✓ admin can change the public price before stripe is configured        0.13s  
+  ✓ public purchase cta uses the current admin plan title                0.02s  
+  ✓ admin price change reaches customers when stripe is temporarily una… 0.03s  
+  ✓ admin can save an enquiry only plan while stripe is configured       0.02s  
+  ✓ public organisation enquiry is stored and visible to admin           0.05s  
+  ✓ admin starts a business agreement from the received enquiry only on… 0.02s  
+  ✓ admin can email and resend an active organisation code to the enqui… 0.06s  
+  ✓ agreement shows only its claimed enterprise code users               0.04s  
+  ✓ payment toggle on a new deal activates seats and the enterprise cod… 0.06s  
+  ✓ admin can rotate an enterprise code without changing seat usage      0.04s  
+  ✓ agreements list shows claimed seat usage and the requested sidebar…  0.04s  
+  ✓ existing agreement payment emails one pdf invoice for the agreed to… 0.40s  
+  ✓ invoice failure preserves paid agreement and retries original detai… 0.11s  
+  ✓ historical paid agreement requires explicit invoice send             0.03s  
+  ✓ unpaid agreement cannot send an invoice and guests cannot send       0.02s  
+
+   PASS  Tests\Feature\AdminInsightsPagesTest
+  ✓ redesigned admin pages are available to admins                       0.06s  
+  ✓ insight pages require an admin session                               0.02s  
+
+   PASS  Tests\Feature\AdminUserManagementVisibilityTest
+  ✓ admin sees registered voucher user on plan and status pages          3.29s  
+
+   PASS  Tests\Feature\AssessmentResumeTest
+  ✓ standard assessment resumes at the next unanswered question          0.06s  
+  ✓ dimensional assessment resumes after a completed standard assessmen… 0.03s  
+  ✓ completed assessments do not offer resume                            0.02s  
+  ✓ public header reflects paid assessment progress with data set "paid… 0.03s  
+  ✓ public header reflects paid assessment progress with data set "paid… 0.07s  
+  ✓ public header reflects paid assessment progress with data set "paid… 0.07s  
+  ✓ public header reflects paid assessment progress with data set "paid… 0.03s  
+  ✓ public header reflects paid assessment progress with data set "unpa… 0.03s  
+  ✓ public header reflects paid assessment progress with data set "unpa… 0.04s  
+  ✓ saved progress survives logout and native login with data set "stan… 0.07s  
+  ✓ saved progress survives logout and native login with data set "dime… 0.04s  
+
+   PASS  Tests\Feature\AssessmentSubmissionRecoveryTest
+  ✓ fresh adult completes 25 and reaches 12 question section             0.35s  
+  ✓ missing session recovers saved attempt and completes standard asses… 0.43s  
+  ✓ logout login then direct question25 submission completes saved atte… 0.38s  
+  ✓ missing session on question1 reuses existing attempt                 0.06s  
+  ✓ recovery does not use another users attempt                          0.04s  
+  ✓ recovery does not reopen completed attempt                           0.37s  
+  ✓ completing a nonfirst attempt preserves both attempts and answers    0.39s  
+  ✓ submission cannot modify another users session attempt               0.04s  
+  ✓ missing session recovers latest unfinished attempt without deleting… 0.36s  
+  ✓ missing session recovers latest unfinished attempt without deleting… 0.38s  
+
+   PASS  Tests\Feature\CheckoutAndLoginOwnershipTest
+  ✓ guest cannot login using a checkout url                              0.03s  
+  ✓ other members checkout is rejected without changes                   0.01s  
+  ✓ legacy checkout without an owner cannot select account by email      0.01s  
+  ✓ missing checkout id never claims payment success                     0.01s  
+  ✓ paid owner keeps registered identity and receives access             0.01s  
+  ✓ unpaid complete subscription does not grant access                   0.01s  
+  ✓ login preserves answers and checks attempt ownership with data set…  0.01s  
+  ✓ login preserves answers and checks attempt ownership with data set…  0.01s  
+  ✓ login preserves answers and checks attempt ownership with data set…  0.01s  
+  ✓ login preserves answers and checks attempt ownership with data set…  0.01s  
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ the application returns a successful response                        0.02s  
+
+   PASS  Tests\Feature\LandingProgramsTest
+  ✓ saved package changes appear on cards and details                    0.02s  
+  ✓ card and navigation visibility and order follow admin catalog        0.02s  
+  ✓ all program pages use current names and age limits                   0.02s  
+  ✓ public information pages render with local assets and footer         0.02s  
+
+   PASS  Tests\Feature\NativeLoginCompatibilityTest
+  ✓ verified user without a legacy identity is repaired on login         0.02s  
+  ✓ mirror only account cannot crash native sign in                      0.26s  
+  ✓ mirror only account is activated after email reset                   0.04s  
+
+   PASS  Tests\Feature\NativeRegistrationTest
+  ✓ signup page loads                                                    0.02s  
+  ✓ login page sends new visitors to the access choice                   0.01s  
+  ✓ valid registration creates account and logs in                       0.03s  
+  ✓ pay first registration with selected plan redirects to checkout      0.03s  
+  ✓ new public purchase registration reaches checkout                    0.02s  
+  ✓ age ineligible plan selection does not create an account             0.02s  
+  ✓ duplicate email is rejected                                          0.02s  
+  ✓ duplicate username is rejected                                       0.02s  
+  ✓ duplicate username reopens the public purchase registration modal    0.03s  
+  ✓ underage is rejected                                                 0.01s  
+  ✓ future dob is rejected                                               0.01s  
+  ✓ iso date of birth format is rejected                                 0.01s  
+  ✓ password mismatch is rejected                                        0.01s  
+  ✓ supported country phone numbers are normalized with data set " unit… 0.02s  
+  ✓ supported country phone numbers are normalized with data set " indi… 0.03s  
+  ✓ supported country phone numbers are normalized with data set " u s…  0.02s  
+  ✓ phone country and digits are required and length checked             0.02s  
+  ✓ new user can log in natively after signup                            0.03s  
+  ✓ login with selected plan redirects to checkout                       0.02s  
+
+   PASS  Tests\Feature\OrganizationCodeServiceTest
+  ✓ paid quote shared code claims exactly one available seat             0.03s  
+  ✓ organisation code rejects an out of range age without consuming a s… 0.02s  
+  ✓ out of range dob is rejected before native signup creates an accoun… 0.03s  
+  ✓ member code is accepted through the actual user access form          0.03s  
+  ✓ guest can validate an organisation code before registration then cl… 0.03s  
+  ✓ organisation code confirmation cannot be opened by another user      0.02s  
+  ✓ admin can disable and reenable the same existing organisation code   0.04s  
+  ✓ admin creates an unpaid agreement from an enquiry then payment acti… 0.17s  
+
+   PASS  Tests\Feature\OtpFlowTest
+  ✓ registration requires otp then creates account                       0.03s  
+  ✓ registration wrong otp does not create account                       0.02s  
+  ✓ pending signup is not trapped when otp is disabled                   0.02s  
+  ✓ verified purchase signup reaches checkout                            0.03s  
+  ✓ login does not send or require an otp                                0.02s  
+  ✓ login wrong password never sends otp                                 0.02s  
+
+   PASS  Tests\Feature\PayFirstGateTest
+  ✓ free first lets free user into intro                                 0.01s  
+  ✓ pay first redirects free user to landing                             0.01s  
+  ✓ pay first redirects guest to sign in                                 0.01s  
+  ✓ pay first lets paid user into intro                                  0.01s  
+  ✓ paid user can reach legacy brain results without wordpress subscrip… 0.01s  
+  ✓ free user is blocked from legacy brain results                       0.01s  
+  ✓ small group user can reach report download                           0.01s  
+  ✓ guest checkout preserves package and redirects to signup             0.01s  
+
+   PASS  Tests\Feature\PaymentInvoiceTest
+  ✓ confirmed payment sends one invoice to registered email              0.14s  
+  ✓ unpaid session waits for settlement                                  0.01s  
+  ✓ delivery failure preserves payment for retry                         0.01s  
+
+   PASS  Tests\Feature\PermanentVoucherDatabaseTest
+  ✓ permanent voucher is single use and grants the selected package      0.03s  
+
+   PASS  Tests\Feature\PlanAgeEligibilityTest
+  ✓ ineligible logged in user cannot select or directly checkout a plan  0.02s  
+  ✓ eligible logged in user can continue to checkout                     0.01s  
+
+   PASS  Tests\Feature\PublicAccessChoiceTest
+  ✓ landing assessment choice is public and pay myself reaches plans     0.01s  
+  ✓ invalid public code stays on choice screen with an error             0.02s  
+
+   PASS  Tests\Feature\PublicPlanSelectionTest
+  ✓ signed in customer selecting a plan reaches checkout                 0.02s  
+  ✓ guest cannot use the signed in plan continuation route               0.01s  
+  ✓ invalid or free plan cannot enter the purchase flow                  0.01s  
+
+   PASS  Tests\Feature\RegistrationAccessFlowTest
+  ✓ organisation code replaces old purchase and voucher context          0.01s  
+  ✓ existing mixed session ignores old form fields                       0.01s  
+  ✓ organisation still rejects adults                                    0.01s  
+  ✓ pay myself restores plan age validation                              0.01s  
+  ✓ invalid code preserves existing flow                                 0.01s  
+  ✓ voucher replaces organisation context                                0.01s  
+  ✓ register cta uses access choice                                      0.01s  
+
+   PASS  Tests\Feature\SignupCsrfRecoveryTest
+  ✓ stale signup token returns to form without replaying passwords       0.01s  
+  ✓ stale otp form keeps pending signup for retry                        0.01s  
+  ✓ lost signup session returns to registration                          0.01s  
+  ✓ matching token reaches otp validation                                0.01s  
+  ✓ otp form is not cacheable and renders current session token          0.01s  
+  ✓ json and unrelated posts still reject bad tokens                     0.01s  
+
+   PASS  Tests\Feature\StripeWebhookEntitlementTest
+  ✓ checkout session completed grants package via metadata               0.02s  
+  ✓ paid checkout is recorded once with customer and package             0.14s  
+  ✓ checkout billing name does not replace the registered profile name   0.01s  
+  ✓ admin payments prefer the registered customer for recorded checkout  0.02s  
+  ✓ unpaid checkout session does not grant                               0.01s  
+  ✓ subscription active grants via price id when no metadata package     0.02s  
+  ✓ subscription deleted downgrades to free                              0.02s  
+  ✓ past due keeps access during dunning                                 0.02s  
+  ✓ canceled subscription revokes                                        0.02s  
+  ✓ unpaid checkout with complete status does not grant                  0.01s  
+  ✓ entitlement service creates mirror when missing                      0.01s  
+  ✓ unknown user is ignored safely                                       0.01s  
+
+  Tests:    161 passed (1451 assertions)
+  Duration: 11.84s
+

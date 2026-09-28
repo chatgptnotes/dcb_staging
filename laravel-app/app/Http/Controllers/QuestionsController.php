@@ -615,8 +615,23 @@ public function thankyou() {
         $dob = session('user_dob'); 
         $age = \Carbon\Carbon::parse($dob)->age;
 
+        // Login restores the user, but an already-open question can be submitted
+        // before Resume restores its attempt. Recover only this user's unfinished work.
+        if (session('user_id') && ! session('answer_main_id')) {
+            $attempt = QuestionAnswerMain::where('user_id', session('user_id'))
+                ->where(fn ($query) => $query->whereNull('status')->orWhere('status', '!=', 'complete'))
+                ->latest('id')
+                ->first();
+
+            if ($attempt) {
+                session(['answer_main_id' => $attempt->id]);
+            }
+        }
+
             if(session('user_id')){
                 if(session('answer_main_id')){
+                    abort_unless(QuestionAnswerMain::where('id', session('answer_main_id'))
+                        ->where('user_id', session('user_id'))->exists(), 403);
                     $question_no = $request->question_no;
                     
                     if(QuestionAnswers::where("answer_main_id", session('answer_main_id'))->where("question_no", $request->question_no)
@@ -648,16 +663,10 @@ public function thankyou() {
                                 $QuestionAnswerMain->status = "complete";
                                 $QuestionAnswerMain->update();
                                 
-                            if(QuestionAnswerMain::where("user_id",session('user_id'))->exists() && QuestionAnswerMain::where("user_id",session('user_id'))->value('id') != session('answer_main_id')){
-                                QuestionAnswerMain::where("id",session('answer_main_id'))->delete();
-                                QuestionAnswers::where("answer_main_id",session('answer_main_id'))->delete();
-                                $request->session()->forget(['answer_main_id']);
-                            }
-                            else{
+                                // Another attempt must never cause completed answers to be discarded.
                                 $BrainResultsController = new BrainResultsController();
                                 $BrainResultsController->add_brain_results(session('answer_main_id'));
                                 $request->session()->forget(['answer_main_id']);
-                            }
                                 if ($age < 15) {
                                     return redirect('questions-completed');
                                 }

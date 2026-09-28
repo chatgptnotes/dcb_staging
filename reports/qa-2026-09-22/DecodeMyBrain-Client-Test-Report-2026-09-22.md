@@ -1,3 +1,34 @@
+## 28 September 2026 — Assessment submission recovery
+
+**Status: PASS — fixed and verified locally; not deployed to staging.**
+
+After a patient logged out and back in, submitting an already-open question 25 without clicking Resume could return them to question 1 while their first 24 answers remained saved. The submission handler now recovers the signed-in patient's latest unfinished assessment when the session attempt ID is missing, saves the answer to that attempt, and advances to the 12-question section. Returning to question 1 also reuses unfinished work instead of creating a duplicate attempt.
+
+The defect and logout/login trigger were reproduced locally before the fix. This verification does not establish the trigger of the originally reported staging incident.
+
+| Assessment recovery test | Expected result | Result |
+| --- | --- | --- |
+| Fresh adult assessment | Save all 25 answers, mark the attempt complete, and open the 12-question section. | PASS |
+| Missing assessment session ID after question 24 | Recover the existing attempt, save answer 25, and advance without creating another attempt. | PASS |
+| Logout/login followed by direct submission of question 25 | Recover saved progress without requiring a separate Resume click and open the 12-question section. | PASS |
+| Return to question 1 with a missing session ID | Reuse the existing attempt and avoid duplicate attempts or answer rows. | PASS |
+| Another user's unfinished attempt | Do not recover or modify another user's assessment. | PASS |
+| Previously completed attempt | Do not reopen or change its saved answers during recovery. | PASS |
+| Completion when another attempt is the first database match | Preserve the completed attempt and all 25 answers, preserve the other attempt, calculate the result, and open the 12-question section. | PASS |
+| Session points to another patient's attempt | Reject submission with HTTP 403 and leave the other patient's answers unchanged. | PASS |
+| Recovery with an older unfinished attempt | Complete the latest unfinished attempt and preserve the older attempt and its answers. | PASS |
+| Recovery with an older completed attempt | Complete the latest unfinished attempt and preserve the older completed attempt and its answers. | PASS |
+
+**Full regression result:** 161 tests passed, 1,451 assertions, 11.84 seconds. The ten assessment recovery cases are included in this total, not additional to it. Before the fix, the new regression checks demonstrated three failures: missing-session completion, completion after logout/login, and duplicate-attempt prevention on question 1.
+
+**Additional production-readiness check:** A new regression reproduced deletion of the active attempt and its answers when completion selected another attempt for the same patient. The deletion branch was removed; completion now preserves the active assessment and calculates its result. A second regression demonstrated that a session could reference another patient's attempt; submissions now verify ownership before writing. Both tests failed before their fixes and pass afterward. Missing-session recovery also passed with older unfinished and completed attempts. These fixes are verified locally; staging verification and deployment remain pending.
+
+**Environment and scope:** Local Laravel application and MySQL; automated HTTP feature tests exercise routes, login/logout, sessions and persisted answers. Synthetic assessment records use explicit cleanup because legacy answer tables use MyISAM. These results do not certify browser/device behaviour, scientific score accuracy, or staging deployment.
+
+**Evidence:** [Full regression execution log](evidence/assessment-recovery-regression-2026-09-28.log) and [JUnit results](evidence/assessment-recovery-regression-2026-09-28.xml). Regression source: `laravel-app/tests/Feature/AssessmentSubmissionRecoveryTest.php`. Fix: `laravel-app/app/Http/Controllers/QuestionsController.php`, `save_answers()`.
+
+---
+
 CLIENT DELIVERY  /  22 SEPTEMBER 2026
 
 Software TestSummary Report
