@@ -192,6 +192,14 @@ class AdminCommercialWorkflowTest extends TestCase
         ]);
     }
 
+    public function test_public_organisation_enquiry_requires_every_field(): void
+    {
+        $this->post('/organizations/enquiry', [])->assertSessionHasErrors([
+            'organization_name', 'group_size', 'contact_name',
+            'contact_phone', 'contact_email', 'message',
+        ]);
+    }
+
     public function test_public_organisation_enquiry_is_stored_and_visible_to_admin(): void
     {
         $email = 'enquiry-workflow@example.local';
