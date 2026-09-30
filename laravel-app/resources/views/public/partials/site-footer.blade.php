@@ -32,3 +32,5 @@
   </div>
   <a class="reference-footer-top" href="#" aria-label="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg></a>
 </footer>
+
+@include('public.partials.whatsapp-widget')

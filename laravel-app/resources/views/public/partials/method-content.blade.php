@@ -24,7 +24,7 @@
 			<div class="elementor-widget-wrap elementor-element-populated">
 						<div class="elementor-element elementor-element-9bf95b2 elementor-widget elementor-widget-heading" data-id="9bf95b2" data-element_type="widget" data-widget_type="heading.default">
 				<div class="elementor-widget-container">
-			<h1 class="elementor-heading-title elementor-size-default">Mylimitless Method </h1>		</div>
+			<h1 class="elementor-heading-title elementor-size-default">Decodemybrain Method</h1>		</div>
 				</div>
 				<div class="elementor-element-custom_color elementor-element elementor-element-35954a5 elementor-widget elementor-widget-text-editor" data-id="35954a5" data-element_type="widget" data-widget_type="text-editor.default">
 				<div class="elementor-widget-container">
@@ -35,7 +35,7 @@
 				<div class="gt3_module_button_elementor size_custom alignment_inline button_icon_none hover_type5 rounded">
 		<a class="button_size_elementor_custom alignment_inline border_icon_none hover_type5 btn_icon_position_left" href="{{ route('access.choice') }}">
 				<span class="gt3_module_button__container">
-											<span class="elementor_gt3_btn_text">Unlock My Brain Today for FREE!</span>						<span class="gt3_module_button__cover front"></span>
+											<span class="elementor_gt3_btn_text">Unlock My Brain Today!</span>						<span class="gt3_module_button__cover front"></span>
 						<span class="gt3_module_button__cover back"></span>
 									</span>
 		</a>
@@ -108,7 +108,7 @@
 				<div class="gt3_module_button_elementor size_custom alignment_inline button_icon_none hover_type5 rounded">
 		<a class="button_size_elementor_custom alignment_inline border_icon_none hover_type5 btn_icon_position_left" href="{{ route('access.choice') }}">
 				<span class="gt3_module_button__container">
-											<span class="elementor_gt3_btn_text">Unlock My Brain Today for FREE!</span>						<span class="gt3_module_button__cover front"></span>
+											<span class="elementor_gt3_btn_text">Unlock My Brain Today!</span>						<span class="gt3_module_button__cover front"></span>
 						<span class="gt3_module_button__cover back"></span>
 									</span>
 		</a>
