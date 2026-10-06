@@ -44,6 +44,7 @@ class CheckoutAndLoginOwnershipTest extends TestCase
             $t->id();
             $t->integer('user_id');
             $t->string('package')->nullable();
+            $t->integer('brain_profile_id')->nullable();
             $t->timestamps();
         });
         DB::table('users')->insert(['wp_user_id' => 42, 'email' => 'buyer@example.com', 'status' => 'active']);
@@ -117,6 +118,54 @@ class CheckoutAndLoginOwnershipTest extends TestCase
         $this->withSession(['user_id' => 42])->get('/checkout/success?session_id=cs_test_owned')
             ->assertRedirect('/')->assertSessionHas('fail');
         $this->assertNull(DB::table('users')->value('package'));
+    }
+
+    /** @dataProvider returningMemberPackages */
+    public function test_returning_member_login_uses_admin_catalog_for_payment_gate(string $package, bool $paid): void
+    {
+        config(['packages.funnel' => 'pay_first']);
+        Schema::create('pricing_packages', function ($t) {
+            $t->id();
+            $t->string('slug');
+            $t->string('title');
+            $t->string('price_label');
+            $t->string('type');
+            $t->string('stripe_price_id')->nullable();
+            $t->string('cta_mode');
+            $t->integer('sort_order');
+        });
+        DB::table('pricing_packages')->insert([
+            'slug' => 'small-group', 'title' => 'Small Group', 'price_label' => '$99',
+            'type' => 'one_time', 'cta_mode' => 'purchase', 'sort_order' => 1,
+        ]);
+        DB::table('wp_users')->insert([
+            'user_id' => 42, 'package' => $package, 'brain_profile_id' => 10,
+        ]);
+        DB::table('question_answers_main')->insert(['user_id' => 42, 'status' => 'complete']);
+        session(['user_id' => 42]);
+        $request = Request::create('/sign-in', 'POST');
+        $request->setLaravelSession(app('session.store'));
+
+        $method = new \ReflectionMethod(UserController::class, 'adoptGuestAnswersAndRedirect');
+        $method->setAccessible(true);
+        $response = $method->invoke(app(UserController::class), $request);
+
+        $this->assertSame(url($paid ? 'dashboard' : '/'), $response->getTargetUrl());
+        if ($paid) {
+            $this->assertNull(session('fail'));
+        } else {
+            $this->assertSame('Please choose Book Today to select a plan and continue to payment.', session('fail'));
+        }
+    }
+
+    public static function returningMemberPackages(): array
+    {
+        return [
+            'paid admin plan absent from config' => ['small-group', true],
+            'normalized paid admin plan' => [' "SMALL-GROUP" ', true],
+            'free member' => ['free', false],
+            'unrecognized entitlement' => ['unknown-plan', false],
+        ];
     }
 
     /** @dataProvider attemptOwners */

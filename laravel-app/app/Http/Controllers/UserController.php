@@ -475,9 +475,7 @@ private function adoptGuestAnswersAndRedirect(Request $request)
     // to pricing instead of /intro. Already-paid users proceed normally.
     if (config('packages.funnel') === 'pay_first') {
         $package = WPUsers::where('user_id', session('user_id'))->value('package');
-        $normalized = strtolower(trim((string) $package, " \t\n\r\0\x0B\"'"));
-        $paidSlugs = array_keys((array) config('packages.plans', []));
-        if (!in_array($normalized, $paidSlugs, true)) {
+        if (! app(\App\Services\Billing\PackageCatalog::class)->isPaid($package)) {
             return redirect('/')->with('fail', 'Please choose Book Today to select a plan and continue to payment.');
         }
     }

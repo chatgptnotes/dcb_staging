@@ -49,12 +49,6 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-12 col-lg-6 mt-0  d-flex flex-column justify-content-center">
-                            <div class="d-flex flex-column flex-lg-row justify-content-lg-end gap-2 button-row">
-                                <!--<button class="rounded-phill-button outlined">Share my Profile</button>-->
-                                <a href="{{url('profile-settings')}}" class="d-flex justify-content-center align-items-center"><button class="rounded-phill-button background">Profile Setting</button></a>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
@@ -169,6 +163,5 @@
         </div>
    </div>
 @endsection
-
 
 
