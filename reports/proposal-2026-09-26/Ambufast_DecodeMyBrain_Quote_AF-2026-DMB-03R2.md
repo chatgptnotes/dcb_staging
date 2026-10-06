@@ -2,7 +2,7 @@
 
 AF-2026-DMB-03R2 · 26 September 2026
 
-AED 2,550 / INR 63,750.
+AED 2,250 / INR 56,250.
 
 
 ---
@@ -228,7 +228,7 @@ The application will be prepared for staging on client-owned Hostinger hosting f
 
 Proposed Organisation Commercial Workflow
 
-The organisation enquiry-to-payment-and-access workflow will be developed as an integrated public enquiry and administration flow, included in the AED 2,550 / INR 63,750 project fee.
+The organisation enquiry-to-payment-and-access workflow will be developed as an integrated public enquiry and administration flow, included in the AED 2,250 / INR 56,250 project fee.
 
 1. Organisation enquiry
 
@@ -268,22 +268,24 @@ Commercials & Payment Schedule
 
 Fixed project fee payable by Bettroi to AmbuFast for the scope and deliverables described in this revised quotation. The amount represents the AmbuFast development share of the Bettroi engagement.
 
-ITEM | AED | INR (×25)
-Development, integration and migration; staging and production deliverables; proposed UI revision and organisation workflow | 2,550 | 63,750
-TOTAL PROJECT AMOUNT — ONE-TIME | 2,550 | 63,750
+ Total Development Cost:  AED 4,500.  AmbuFast Share (50%):  AED 2,250.  Equivalent INR:  INR 56,250.
 
- Amount in words:  UAE Dirhams Two Thousand Five Hundred and Fifty Only; Indian Rupees Sixty-Three Thousand Seven Hundred and Fifty Only.
+ITEM | AED | INR (×25)
+Development, integration and migration; staging and production deliverables; proposed UI revision and organisation workflow | 2,250 | 56,250
+REVISED ONE-TIME COST FOR AMBUFAST | 2,250 | 56,250
+
+ Amount in words:  UAE Dirhams Two Thousand Two Hundred and Fifty Only; Indian Rupees Fifty-Six Thousand Two Hundred and Fifty Only.
 
 COST SUMMARY
 
-<b>AED 2,550 / INR 63,750 — one-time.</b> Includes the stated development scope, hosting migration, staging QA, production cutover support and 30-day defect-correction warranty. The client provides the Hostinger hosting.
+<b>AED 2,250 / INR 56,250 — one-time.</b> Includes the stated development scope, hosting migration, staging QA, production cutover support and 30-day defect-correction warranty. The client provides the Hostinger hosting.
 
 Payment Structure
 
 MILESTONE | SHARE | AED | INR
-Due now — development / staging milestone | 50% | 1,275 | 31,875
-Due at production go-live | 50% | 1,275 | 31,875
-TOTAL | 100% | 2,550 | 63,750
+Due now — development / staging milestone | 50% | 1,125 | 28,125
+Due at production go-live | 50% | 1,125 | 28,125
+TOTAL | 100% | 2,250 | 56,250
 
 Payable in AED or INR at the agreed quotation conversion of INR 25 = AED 1. Invoices are payable within 7 business days. The existing two-stage payment structure is retained.
 
@@ -305,13 +307,13 @@ Internal Ambufast QA → staging on client-owned Hostinger → Bettroi/client UA
 
 Engagement Terms
 
- Scope & Pricing.  AmbuFast delivers the agreed scope and deliverables to Bettroi for AED 2,550 / INR 63,750. Hosting migration is included. Client-owned Hostinger hosting will be used.
+ Scope & Pricing.  AmbuFast delivers the agreed scope and deliverables to Bettroi for AED 2,250 / INR 56,250. Hosting migration is included. Client-owned Hostinger hosting will be used.
 
  Delivery.  The application will be delivered to staging after internal QA. Acceptance-environment verification and Bettroi UAT will be carried out before production deployment. Production cutover, including DNS, SSL and live Stripe configuration, is included and proceeds on Bettroi approval and provision of required access.
 
  Fixed Scope.  The landing page UI revision is included in the proposed scope. Additional features or further revisions beyond the stated scope require a written change order agreed by both parties.
 
- Payment & Acceptance.  AED 1,275 / INR 31,875 is due now and AED 1,275 / INR 31,875 at production go-live. Invoices are payable within 7 business days. Production go-live constitutes acceptance by Bettroi and triggers the final instalment.
+ Payment & Acceptance.  AED 1,125 / INR 28,125 is due now and AED 1,125 / INR 28,125 at production go-live. Invoices are payable within 7 business days. Production go-live constitutes acceptance by Bettroi and triggers the final instalment.
 
  Intellectual Property.  All custom code, models and documentation vest in Bettroi on receipt of final payment. Bettroi passes IP to the end client under its client agreement. AmbuFast retains rights to generic frameworks and methodology.
 

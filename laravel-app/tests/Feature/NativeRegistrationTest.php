@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Models\OrganizationEnquiry;
 use App\Models\WPUsers;
 use App\Models\PricingPackage;
 use Illuminate\Support\Facades\Hash;
@@ -39,6 +40,7 @@ class NativeRegistrationTest extends TestCase
 
     private function cleanup(): void
     {
+        OrganizationEnquiry::where('contact_email', self::EMAIL)->delete();
         $ids = User::where('email', self::EMAIL)->orWhere('username', self::USERNAME)->pluck('wp_user_id')->all();
         User::where('email', self::EMAIL)->orWhere('username', self::USERNAME)->delete();
         if (!empty($ids)) {
@@ -60,6 +62,49 @@ class NativeRegistrationTest extends TestCase
             'password' => 'Secret#2026',
             'password_confirmation' => 'Secret#2026',
         ], $overrides);
+    }
+
+    private function enquiryPayload(): array
+    {
+        return [
+            'organization_name' => 'Signup Compatibility Test',
+            'group_size' => 10,
+            'contact_name' => 'Native Tester',
+            'contact_phone' => '+971512345678',
+            'contact_email' => self::EMAIL,
+            'message' => 'Please provide group pricing.',
+        ];
+    }
+
+    public function test_enquiry_email_can_then_register_as_an_individual(): void
+    {
+        $this->post('/organizations/enquiry', $this->enquiryPayload())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('organization.enquiry.create'));
+
+        $this->assertFalse(User::where('email', self::EMAIL)->exists());
+        $this->assertFalse(WPUsers::where('email', self::EMAIL)->exists());
+
+        $this->post('/sign-up', $this->validPayload())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('intro');
+
+        $this->assertDatabaseHas('users', ['email' => self::EMAIL]);
+        $this->assertDatabaseHas('organization_enquiries', ['contact_email' => self::EMAIL]);
+    }
+
+    public function test_individual_email_can_then_submit_an_enquiry(): void
+    {
+        $this->post('/sign-up', $this->validPayload())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('intro');
+
+        $this->post('/organizations/enquiry', $this->enquiryPayload())
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('organization.enquiry.create'));
+
+        $this->assertDatabaseHas('organization_enquiries', ['contact_email' => self::EMAIL]);
+        $this->assertSame(1, User::where('email', self::EMAIL)->count());
     }
 
     public function test_signup_page_loads(): void

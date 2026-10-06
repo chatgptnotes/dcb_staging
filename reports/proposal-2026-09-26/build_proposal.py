@@ -1,4 +1,4 @@
-acfrom pathlib import Path
+from pathlib import Path
 import re, html
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
@@ -90,7 +90,7 @@ p('Production verification will cover the live Stripe configuration, payment-to-
 sub('Delivery approach')
 p('The application will be prepared for staging on client-owned Hostinger hosting following internal QA. The team will verify the build and database configuration in the acceptance environment, address UAT feedback and proceed to production cutover after Bettroi approval.')
 page('03 - INCLUDED PLATFORM WORK / ORGANISATIONS','Proposed Organisation Commercial Workflow')
-p('The organisation enquiry-to-payment-and-access workflow will be developed as an integrated public enquiry and administration flow, included in the AED 2,550 / INR 63,750 project fee.')
+p('The organisation enquiry-to-payment-and-access workflow will be developed as an integrated public enquiry and administration flow, included in the AED 2,250 / INR 56,250 project fee.')
 sub('1. Organisation enquiry')
 p('A public organisation enquiry form will capture requests and store them for the admin team. Admins will be able to review enquiries and update their status as new, reviewed, converted or closed.')
 sub('2. Admin agreement creation')
@@ -106,17 +106,18 @@ p('The admin will be able to view claimed seats and users for each agreement, mo
 p('The workflow will be verified during staging QA and client UAT, with production configuration and handover included in the proposed delivery scope.','small')
 page('04 - COMMERCIALS','Commercials & Payment Schedule')
 p('Fixed project fee payable by Bettroi to AmbuFast for the scope and deliverables described in this revised quotation. The amount represents the AmbuFast development share of the Bettroi engagement.')
-table(['ITEM','AED','INR (×25)'],[['Development, integration and migration; staging and production deliverables; proposed UI revision and organisation workflow','2,550','63,750'],['TOTAL PROJECT AMOUNT — ONE-TIME','2,550','63,750']],[315,90,106])
-p('<b>Amount in words:</b> UAE Dirhams Two Thousand Five Hundred and Fifty Only; Indian Rupees Sixty-Three Thousand Seven Hundred and Fifty Only.','small')
-callout('COST SUMMARY','<b>AED 2,550 / INR 63,750 — one-time.</b> Includes the stated development scope, hosting migration, staging QA, production cutover support and 30-day defect-correction warranty. The client provides the Hostinger hosting.')
+p('<b>Total Development Cost:</b> AED 4,500. <b>AmbuFast Share (50%):</b> AED 2,250. <b>Equivalent INR:</b> INR 56,250.','small')
+table(['ITEM','AED','INR (×25)'],[['Development, integration and migration; staging and production deliverables; proposed UI revision and organisation workflow','2,250','56,250'],['REVISED ONE-TIME COST FOR AMBUFAST','2,250','56,250']],[315,90,106])
+p('<b>Amount in words:</b> UAE Dirhams Two Thousand Two Hundred and Fifty Only; Indian Rupees Fifty-Six Thousand Two Hundred and Fifty Only.','small')
+callout('COST SUMMARY','<b>AED 2,250 / INR 56,250 — one-time.</b> Includes the stated development scope, hosting migration, staging QA, production cutover support and 30-day defect-correction warranty. The client provides the Hostinger hosting.')
 sub('Payment Structure')
-table(['MILESTONE','SHARE','AED','INR'],[['Due now — development / staging milestone','50%','1,275','31,875'],['Due at production go-live','50%','1,275','31,875'],['TOTAL','100%','2,550','63,750']],[235,65,90,121])
+table(['MILESTONE','SHARE','AED','INR'],[['Due now — development / staging milestone','50%','1,125','28,125'],['Due at production go-live','50%','1,125','28,125'],['TOTAL','100%','2,250','56,250']],[235,65,90,121])
 p('Payable in AED or INR at the agreed quotation conversion of INR 25 = AED 1. Invoices are payable within 7 business days. The existing two-stage payment structure is retained.')
 sub('Scope Changes & Ongoing Support')
 p('Additional features beyond the stated scope require a written change order agreed between AmbuFast and Bettroi. Any ongoing maintenance retainer after go-live will be agreed separately; no maintenance retainer forms part of this project total.')
 callout('DELIVERY SEQUENCE','Internal Ambufast QA → staging on client-owned Hostinger → Bettroi/client UAT and sign-off → approved production cutover → final payment and handover → 30-day defect-correction period.')
 page('05 - TERMS & ACCEPTANCE','Engagement Terms')
-terms=[('Scope & Pricing','AmbuFast delivers the agreed scope and deliverables to Bettroi for AED 2,550 / INR 63,750. Hosting migration is included. Client-owned Hostinger hosting will be used.'),('Delivery','The application will be delivered to staging after internal QA. Acceptance-environment verification and Bettroi UAT will be carried out before production deployment. Production cutover, including DNS, SSL and live Stripe configuration, is included and proceeds on Bettroi approval and provision of required access.'),('Fixed Scope','The landing page UI revision is included in the proposed scope. Additional features or further revisions beyond the stated scope require a written change order agreed by both parties.'),('Payment & Acceptance','AED 1,275 / INR 31,875 is due now and AED 1,275 / INR 31,875 at production go-live. Invoices are payable within 7 business days. Production go-live constitutes acceptance by Bettroi and triggers the final instalment.'),('Intellectual Property','All custom code, models and documentation vest in Bettroi on receipt of final payment. Bettroi passes IP to the end client under its client agreement. AmbuFast retains rights to generic frameworks and methodology.'),('Data & Migration Handover','Content, media, user migration, legacy URL redirects and the read-only historical order archive remain within the migration handover scope. Their completeness is to be confirmed at acceptance. Bettroi is responsible for accurate client content and consents.'),('Warranty','A 30-day defect-correction period runs from production handover to Bettroi for bugs in delivered code. Third-party platform and API changes are excluded.'),('Confidentiality & Relationship','This internal vendor quotation, source code and artefacts are confidential to AmbuFast and Bettroi and are not for distribution to the end client. Bettroi remains the contracting party with INFINITY BRAIN DWC-LLC / Dr. Sweta Adatia. AmbuFast has no direct contractual relationship with the end client.'),('Validity','Valid for 60 days from 26 September 2026. This revision, AF-2026-DMB-03R2, supersedes AF-2026-DMB-03 and AF-2026-DMB-03R.')]
+terms=[('Scope & Pricing','AmbuFast delivers the agreed scope and deliverables to Bettroi for AED 2,250 / INR 56,250. Hosting migration is included. Client-owned Hostinger hosting will be used.'),('Delivery','The application will be delivered to staging after internal QA. Acceptance-environment verification and Bettroi UAT will be carried out before production deployment. Production cutover, including DNS, SSL and live Stripe configuration, is included and proceeds on Bettroi approval and provision of required access.'),('Fixed Scope','The landing page UI revision is included in the proposed scope. Additional features or further revisions beyond the stated scope require a written change order agreed by both parties.'),('Payment & Acceptance','AED 1,125 / INR 28,125 is due now and AED 1,125 / INR 28,125 at production go-live. Invoices are payable within 7 business days. Production go-live constitutes acceptance by Bettroi and triggers the final instalment.'),('Intellectual Property','All custom code, models and documentation vest in Bettroi on receipt of final payment. Bettroi passes IP to the end client under its client agreement. AmbuFast retains rights to generic frameworks and methodology.'),('Data & Migration Handover','Content, media, user migration, legacy URL redirects and the read-only historical order archive remain within the migration handover scope. Their completeness is to be confirmed at acceptance. Bettroi is responsible for accurate client content and consents.'),('Warranty','A 30-day defect-correction period runs from production handover to Bettroi for bugs in delivered code. Third-party platform and API changes are excluded.'),('Confidentiality & Relationship','This internal vendor quotation, source code and artefacts are confidential to AmbuFast and Bettroi and are not for distribution to the end client. Bettroi remains the contracting party with INFINITY BRAIN DWC-LLC / Dr. Sweta Adatia. AmbuFast has no direct contractual relationship with the end client.'),('Validity','Valid for 60 days from 26 September 2026. This revision, AF-2026-DMB-03R2, supersedes AF-2026-DMB-03 and AF-2026-DMB-03R.')]
 for title,body in terms:p('<b>'+title+'.</b> '+body)
 current.append(Spacer(1,12))
 table(['FOR AMBUFAST','FOR BETTROI FZE'],[['Dr. B. K. Murali\nDirector\nAmbufast Emergency Services Pvt. Ltd.\nCIN: U86909MH2024PTC436731','Biji Thomas\nCEO & Principal Consultant\nBettroi FZE · DTEC-51432\nDubai Silicon Oasis, UAE'],['Signature & date: __________________','Signature & date: __________________']],[255.5,255.5])
@@ -140,11 +141,11 @@ tracked(c,'DEVELOPMENT QUOTATION - DECODEMYBRAIN.COM',45,706,MUTED,6.6)
 tracked(c,'AMBUFAST TO BETTROI · INTERNAL VENDOR QUOTE',45,690,MUTED,6.6)
 para(c,'Decode My Brain -<br/>Migrate &amp;<br/>Modernise',45,663,405,33,38,'#FFFFFF','Arial-Bold')
 para(c,'DecodeMyBrain is a neuroscience-assessment ecosystem spanning registration, paid access, activation codes, multi-program assessments, reports and corporate/bulk workflows. This revised quotation covers WordPress HTML integration, a new Laravel Admin Dashboard, integration with the existing Laravel application, and staging and production delivery on client-owned Hostinger hosting.',45,532,300,9,16,'#9EA8B9')
-for x,y,w,t in [(45,365,149,'MIGRATE & MODERNISE'),(203,365,100,'AED 2,550'),(312,365,120,'INR 63,750')]:
+for x,y,w,t in [(45,365,149,'MIGRATE & MODERNISE'),(203,365,100,'AED 2,250'),(312,365,120,'INR 56,250')]:
  c.setStrokeColor(colors.HexColor('#374256'));c.roundRect(x,y,w,25,3,stroke=1,fill=0);tracked(c,t,x+11,y+10,'#DCE1EA',6.5)
 # Four-column cover metadata band.
 c.setStrokeColor(colors.HexColor('#303A4D'));c.line(0,157,W,157)
-cols=[('PREPARED BY','Dr. B. K. Murali','Director<br/>Ambufast Emergency Services<br/>Pvt. Ltd.<br/>cmd@hopehospital.com'),('PREPARED FOR','Biji Thomas','CEO &amp; Principal Consultant<br/>Bettroi FZE, Dubai<br/>bk@bettroi.com'),('REFERENCE','AF-2026-DMB-03R2','26 September 2026<br/>Valid: 60 Days<br/>Currency: AED / INR<br/>Replaces: AF-2026-DMB-03R'),('INVESTMENT','AED 2,550','INR 63,750 · One-time<br/>AED 1,275 / INR 31,875<br/>due now')]
+cols=[('PREPARED BY','Dr. B. K. Murali','Director<br/>Ambufast Emergency Services<br/>Pvt. Ltd.<br/>cmd@hopehospital.com'),('PREPARED FOR','Biji Thomas','CEO &amp; Principal Consultant<br/>Bettroi FZE, Dubai<br/>bk@bettroi.com'),('REFERENCE','AF-2026-DMB-03R2','26 September 2026<br/>Valid: 60 Days<br/>Currency: AED / INR<br/>Replaces: AF-2026-DMB-03R'),('INVESTMENT','AED 2,250','INR 56,250 · One-time<br/>AED 1,125 / INR 28,125<br/>due now')]
 for i,(label,title,body) in enumerate(cols):
  x=i*W/4+18
  if i:c.line(i*W/4,0,i*W/4,157)
@@ -167,5 +168,5 @@ for i,(label,flow) in enumerate(pages,2):
  c.setFont('Arial',6);c.drawString(40,16,'AMBUFAST TO BETTROI · CONFIDENTIAL - INTERNAL VENDOR QUOTATION');c.drawRightString(W-40,16,f'{i} / {len(pages)+1}')
  c.showPage()
 c.save()
-(BASE/(NAME+'.md')).write_text('# Decode My Brain — Migrate & Modernise\n\nAF-2026-DMB-03R2 · 26 September 2026\n\nAED 2,550 / INR 63,750.\n\n'+'\n\n'.join(md))
+(BASE/(NAME+'.md')).write_text('# Decode My Brain — Migrate & Modernise\n\nAF-2026-DMB-03R2 · 26 September 2026\n\nAED 2,250 / INR 56,250.\n\n'+'\n\n'.join(md))
 print(BASE/(NAME+'.pdf'))
