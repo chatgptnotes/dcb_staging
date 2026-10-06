@@ -70,7 +70,7 @@
         </div>
     </div>
 </section>
-<section class="footer-nav  border-top bg-light" style="border: none !important;">
+<section class="footer-nav assessment-navigation border-top bg-light" aria-label="Assessment navigation" style="border: none !important;">
 
 <!-- Progress Bar -->
 <div class="progress " style="height: 2px; background-color: #e0e0e0; width: 100%;">
@@ -81,16 +81,16 @@
         </div>
    <br>
     <div class="container">
-        <div class="row align-items-center">
+        <div class="assessment-navigation-row">
             <!-- Left Side: Question Number -->
-            <div class="col-6 text-start d-flex align-items-center gap-2">
+            <div class="assessment-navigation-status">
             <h5 class="question-count text-center">
                    Questions {{$question_no}} out of 12
                 </h5>
                 <form method="post" action="{{ route('assessment.pause') }}" class="d-inline">@csrf<button class="question-nav-back text-purple" type="submit">Save &amp; go Home</button></form>
             </div>
             <!-- Right Side: Navigation Buttons -->
-            <div class="col-6 text-end">
+            <div class="assessment-navigation-actions">
             <?php if($question_no != 1){
                             $prevoius_page = $question_no-1;
                             ?>
@@ -105,6 +105,8 @@
         </div>
     </div>
 </section>
+
+@include('questions.partials.fixed-navigation')
 
 <script>
     function pickAnswer(element, answer) {
