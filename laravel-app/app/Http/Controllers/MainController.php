@@ -874,6 +874,15 @@ public function skill_assestment(){
 
 private function resolveLocalReportPdf($brainProfileId, $ageGroup)
 {
+    // Ship the corrected child Relational + Creative report with the app,
+    // ahead of older uploaded copies or the external report.
+    if ((int) $brainProfileId === 6 && $ageGroup === '12-14') {
+        $correctedReport = resource_path('reports/16.pdf');
+        if (File::exists($correctedReport)) {
+            return $correctedReport;
+        }
+    }
+
     $directory = public_path('reports_pdfs/' . $brainProfileId);
 
     if (!$ageGroup || !File::isDirectory($directory)) {

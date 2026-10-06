@@ -28739,14 +28739,14 @@ setTimeout(() => {
             "You thrive in environments where practical skills and creative thinking intersect, allowing you to apply your knowledge effectively to solve problems and create value. Your ability to integrate creativity with practicality makes you an asset in any team setting, where you can inspire others while contributing innovative solutions."
         ],
         11: [
-            "Your brain is characterized by a strong inclination toward structure, organization, and practical thinking. As a Grounded Thinker or Structured Planner, you possess the ability to analyze situations logically and develop clear, actionable plans. You thrive in environments where clarity, organization, and methodical approaches are valued, allowing you to bring order to complex tasks and achieve your goals effectively.",
-
-            "You excel at identifying the details that contribute to a bigger picture, making you adept at managing projects, coordinating tasks, and ensuring that everything runs smoothly. Your preference for structured environments helps you minimize chaos and foster productivity."
-        ],
-        12: [
             "Your brain is characterized by a strong inclination towards abstract thinking, creativity, and relational dynamics. As an Abstract Idealist or Relational Planner, you possess the ability to envision possibilities and explore ideas beyond the immediate reality. You thrive in environments where creativity is valued, and you can connect with others on a meaningful level.",
 
             "Your thought process often involves considering the big picture and imagining future possibilities. You are drawn to ideas and concepts that inspire and motivate you, and you seek to implement plans that align with your values and ideals. Your relational nature allows you to understand and empathize with others, fostering strong connections and collaborative efforts."
+        ],
+        12: [
+            "Your brain is characterized by a strong inclination toward structure, organization, and practical thinking. As a Grounded Thinker or Structured Planner, you possess the ability to analyze situations logically and develop clear, actionable plans. You thrive in environments where clarity, organization, and methodical approaches are valued, allowing you to bring order to complex tasks and achieve your goals effectively.",
+
+            "You excel at identifying the details that contribute to a bigger picture, making you adept at managing projects, coordinating tasks, and ensuring that everything runs smoothly. Your preference for structured environments helps you minimize chaos and foster productivity."
         ],
         13: [
             "Your brain is characterized by a vibrant and imaginative way of thinking that prioritizes creative exploration, abstract concepts, and visionary ideas. As a Visionary Dreamer or Conceptual Creative, you have a unique ability to envision possibilities and generate innovative ideas. You thrive in environments that allow for creative expression and conceptual thinking.",
