@@ -111,7 +111,9 @@
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
               <li class="nav-item"><a class="nav-link" href="{{ route('landing') }}">Home</a></li>
               @if(session('user_id'))
+                @unless(request()->is('questions/*'))
                 <li class="nav-item"><a class="nav-link" href="{{ url('dashboard') }}">Dashboard</a></li>
+                @endunless
                 <li class="nav-item"><a class="nav-link" href="{{ url('logout') }}">Log out</a></li>
               @else
                 <li class="nav-item"><a class="nav-link" href="{{ url('sign-in') }}">Sign in</a></li>

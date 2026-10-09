@@ -11750,6 +11750,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         
@@ -11790,6 +11791,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -12927,6 +12929,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -12964,6 +12967,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -14096,6 +14100,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -14132,7 +14137,8 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                             </div>
                         </a>
 
-                    </div> 
+                    </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -15256,6 +15262,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -15292,7 +15299,8 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                             </div>
                         </a>
 
-                    </div> 
+                    </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -16305,6 +16313,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                 <?php if ($age > 18): ?>
                 <div class="row mb-4">
 
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -16342,6 +16351,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -17468,6 +17478,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -17505,6 +17516,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -18629,6 +18641,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -18666,6 +18679,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -19793,6 +19807,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -19830,6 +19845,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -20953,6 +20969,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -20990,6 +21007,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -22115,6 +22133,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -22152,6 +22171,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -23278,6 +23298,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -23315,6 +23336,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -24440,6 +24462,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -24477,6 +24500,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -25603,6 +25627,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -25640,6 +25665,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -26768,6 +26794,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -26805,6 +26832,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
@@ -27932,6 +27960,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                     {{-- Parenting Styles card hidden from the dashboard.
                      <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">
                         <a 
                         @if($user_package == 'decodemybrain-deep-dive' || $user_package == 'decodemybrain-guided-friend-and-family-connect')
@@ -27969,6 +27998,7 @@ So, <strong>check out your scores</strong> — discover your dominant style and 
                         </a>
 
                     </div>
+                    --}}
 
 
                     <div class="col-sm-6 col-md-6 col-lg-4 mb-3 ps-0 pe-0 pe-md-2  card-block-dash">

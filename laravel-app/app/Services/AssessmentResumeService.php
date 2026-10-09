@@ -44,14 +44,17 @@ final class AssessmentResumeService
     public function resumeRoute(int $userId, ?string $dateOfBirth): ?string
     {
         if ($attempt = $this->incompleteStandardAttempt($userId)) {
-            $lastQuestion = (int) QuestionAnswers::where('answer_main_id', $attempt->id)->max('question_no');
+            // Legacy question_no columns are text; compare numerically so 14 sorts after 9.
+            $lastQuestion = QuestionAnswers::where('answer_main_id', $attempt->id)
+                ->pluck('question_no')->map(fn ($number) => (int) $number)->max() ?? 0;
 
             return 'questions/q'.min(25, max(1, $lastQuestion + 1));
         }
 
         if ($this->requiresDimensionalAssessment($dateOfBirth) && ($attempt = $this->incompleteDimensionalAttempt($userId))) {
             // Legacy dimensional answers are linked by user_id, not attempt id.
-            $lastQuestion = (int) DimensionalQuestionAnswers::where('user_id', $userId)->max('question_no');
+            $lastQuestion = DimensionalQuestionAnswers::where('user_id', $userId)
+                ->pluck('question_no')->map(fn ($number) => (int) $number)->max() ?? 0;
 
             return 'questions/d'.min(12, max(1, $lastQuestion + 1));
         }

@@ -80,6 +80,50 @@ class AssessmentResumeTest extends TestCase
         $this->assertSame($attempt->id, session('d_answer_main_id'));
     }
 
+    /** @dataProvider doubleDigitProgress */
+    public function test_resume_compares_saved_question_numbers_numerically(bool $dimensional, int $lastQuestion, string $route): void
+    {
+        $attempt = $dimensional ? new DimensionalQuestionAnswerMain() : new QuestionAnswerMain();
+        $attempt->user_id = self::USER_ID;
+        $attempt->save();
+
+        for ($number = 1; $number <= $lastQuestion; $number++) {
+            if ($dimensional) {
+                $answer = new DimensionalQuestionAnswers();
+                $answer->user_id = self::USER_ID;
+                $answer->answer = 'A';
+                $answer->user_type = 'adult';
+                $answer->category = 'analytical';
+            } else {
+                $answer = new QuestionAnswers();
+                $answer->answer_main_id = $attempt->id;
+                $answer->first_answer = 'A';
+                $answer->second_answer = 'B';
+                $answer->third_answer = 'C';
+                $answer->forth_answer = 'D';
+            }
+            $answer->question_no = (string) $number;
+            $answer->question_id = $number;
+            $answer->save();
+        }
+
+        $resume = app(AssessmentResumeService::class);
+        $this->assertSame($route, $resume->resumeRoute(self::USER_ID, '1990-01-01'));
+        $this->assertSame($route, $resume->restore(self::USER_ID, '1990-01-01'));
+        $this->assertSame($attempt->id, session($dimensional ? 'd_answer_main_id' : 'answer_main_id'));
+    }
+
+    public static function doubleDigitProgress(): array
+    {
+        return [
+            'paused on question 15' => [false, 14, 'questions/q15'],
+            'submitted question 15' => [false, 15, 'questions/q16'],
+            'last standard question' => [false, 25, 'questions/q25'],
+            'dimensional question 11' => [true, 10, 'questions/d11'],
+            'last dimensional question' => [true, 12, 'questions/d12'],
+        ];
+    }
+
     public function test_completed_assessments_do_not_offer_resume(): void
     {
         $attempt = new QuestionAnswerMain();
@@ -215,7 +259,13 @@ class AssessmentResumeTest extends TestCase
             ->assertRedirect('/')->assertSessionHas('user_id', self::USER_ID);
         $this->get('/')->assertOk()->assertSee('Resume assessment');
         $this->get('/assessment/resume')->assertRedirect($route)->assertSessionHas($key, $attempt->id);
-        $this->get($route)->assertOk();
+        $response = $this->get($route)->assertOk();
+        preg_match('/<nav class="navbar.*?<\/nav>/s', $response->getContent(), $matches);
+        $this->assertNotEmpty($matches);
+        $navbar = preg_replace('/<!--.*?-->/s', '', $matches[0]);
+        $this->assertStringNotContainsString('>Dashboard</a>', $navbar);
+        $this->assertStringContainsString('>Home</a>', $navbar);
+        $this->assertStringContainsString('>Log out</a>', $navbar);
         $this->assertNotNull($answer->fresh());
         $this->assertSame(self::USER_ID, (int) $attempt->fresh()->user_id);
     }
