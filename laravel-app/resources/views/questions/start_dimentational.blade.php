@@ -123,7 +123,7 @@ margin-right: 10px;
 <section class="section-margin-bottom section-margin-top">
     <div class="container questions-container">
     <h5 class="step-txt">Step 02/02</h5>
-        <h3 class="section-title text-purple">Thank you for completing this assessment.</h3>
+        <h3 class="section-title text-purple">Your first 25 answers are saved. Continue to the final 12 questions.</h3>
         <!--<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor.</p>-->
 
         <div class="tab3 row mt-5 ">

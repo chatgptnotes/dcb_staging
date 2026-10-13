@@ -63,6 +63,69 @@ class AssessmentSubmissionRecoveryTest extends TestCase
         $this->get('/questions/d1')->assertOk()->assertViewIs('questions.dimention_question');
     }
 
+    public function test_missing_birth_date_session_still_sends_adult_to_dimensional_section(): void
+    {
+        $this->journey(24);
+        session()->forget('user_dob');
+        $q = $this->get('/questions/q25')->assertOk()->viewData('question');
+        $this->assertSame('1990-01-01', session('user_dob'));
+        $this->post('/save-answers', ['question_no' => 25, 'question_id' => $q->id,
+            'first_answer' => $q->answer_1, 'second_answer' => $q->answer_2,
+            'third_answer' => $q->answer_3, 'forth_answer' => $q->answer_4])
+            ->assertRedirect('/start-dimentaional-questions');
+        $this->get('/questions/d1')->assertOk();
+    }
+
+    public function test_paid_small_group_user_reaches_dimensional_questions_after_25(): void
+    {
+        config(['packages.funnel' => 'pay_first']);
+        WPUsers::where('user_id', self::UID)->update(['package' => 'small-group']);
+        $this->journey();
+        $this->get('/start-dimentaional-questions')->assertOk()
+            ->assertSee('Continue to the final 12 questions.')
+            ->assertSee('questions/d1');
+        $this->get('/questions/d1')->assertOk()->assertViewIs('questions.dimention_question');
+        $this->get('/assessment/resume')->assertRedirect('/start-dimentaional-questions');
+    }
+
+    public function test_under_15_user_still_finishes_after_25_questions(): void
+    {
+        WPUsers::where('user_id', self::UID)->update(['date_of_birth' => '2014-01-01']);
+        $this->withSession(['user_dob' => '2014-01-01']);
+        $this->journey(24);
+        $q = $this->get('/questions/q25')->assertOk()->viewData('question');
+        $this->post('/save-answers', ['question_no' => 25, 'question_id' => $q->id,
+            'first_answer' => $q->answer_1, 'second_answer' => $q->answer_2,
+            'third_answer' => $q->answer_3, 'forth_answer' => $q->answer_4])
+            ->assertRedirect('/questions-completed');
+    }
+
+    public function test_missing_birth_date_on_submission_does_not_skip_dimensional_section(): void
+    {
+        $this->journey(24);
+        $q = $this->get('/questions/q25')->assertOk()->viewData('question');
+        session()->forget('user_dob');
+        $this->post('/save-answers', ['question_no' => 25, 'question_id' => $q->id,
+            'first_answer' => $q->answer_1, 'second_answer' => $q->answer_2,
+            'third_answer' => $q->answer_3, 'forth_answer' => $q->answer_4])
+            ->assertRedirect('/start-dimentaional-questions');
+    }
+
+    public function test_missing_birth_date_in_both_profile_and_session_does_not_complete_attempt(): void
+    {
+        $this->journey(24);
+        $q = $this->get('/questions/q25')->assertOk()->viewData('question');
+        WPUsers::where('user_id', self::UID)->update(['date_of_birth' => null]);
+        session()->forget('user_dob');
+        $this->post('/save-answers', ['question_no' => 25, 'question_id' => $q->id,
+            'first_answer' => $q->answer_1, 'second_answer' => $q->answer_2,
+            'third_answer' => $q->answer_3, 'forth_answer' => $q->answer_4])
+            ->assertRedirect('/sign-in');
+        $attempt = QuestionAnswerMain::where('user_id', self::UID)->firstOrFail();
+        $this->assertNotSame('complete', $attempt->status);
+        $this->assertSame(24, QuestionAnswers::where('answer_main_id', $attempt->id)->count());
+    }
+
     public function test_missing_session_recovers_saved_attempt_and_completes_standard_assessment(): void
     {
         $this->journey(24);

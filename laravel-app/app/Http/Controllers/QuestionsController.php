@@ -40,6 +40,16 @@ use App\Services\AssessmentResumeService;
 
 class QuestionsController extends Controller
 {
+    private function assessmentDateOfBirth(): ?string
+    {
+        $dob = session('user_dob') ?: WPUsers::where('user_id', session('user_id'))->value('date_of_birth');
+        if ($dob) {
+            session(['user_dob' => $dob]);
+        }
+
+        return $dob ?: null;
+    }
+
     public function pause()
     {
         return redirect()->route('landing')->with('success', 'Your submitted answers are saved. You can resume your assessment anytime.');
@@ -105,7 +115,10 @@ public function thankyou() {
     public function question($question) {
     $wpUser = WPUsers::where('user_id', session('user_id'))->first();
     $dimAnswer = DimensionalQuestionAnswerMain::where('user_id', session('user_id'))->first();
-    $dob = session('user_dob'); 
+    $dob = $this->assessmentDateOfBirth();
+    if (! $dob) {
+        return redirect('sign-in')->with('fail', 'Your date of birth is unavailable. Please sign in again before continuing.');
+    }
     $age = \Carbon\Carbon::parse($dob)->age;
 
     if (str_starts_with($question, 'q')) {
@@ -612,7 +625,10 @@ public function thankyou() {
 
     // LET USER ANSWER QUESTION MULTIPLE TIME
     public function save_answers(Request $request){
-        $dob = session('user_dob'); 
+        $dob = $this->assessmentDateOfBirth();
+        if (! $dob) {
+            return redirect('sign-in')->with('fail', 'Your date of birth is unavailable. Please sign in again before continuing.');
+        }
         $age = \Carbon\Carbon::parse($dob)->age;
 
         // Login restores the user, but an already-open question can be submitted

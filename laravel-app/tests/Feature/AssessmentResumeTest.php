@@ -53,6 +53,25 @@ class AssessmentResumeTest extends TestCase
         $this->assertSame($attempt->id, session('answer_main_id'));
     }
 
+    public function test_adult_can_resume_between_standard_and_dimensional_sections(): void
+    {
+        $standard = new QuestionAnswerMain();
+        $standard->user_id = self::USER_ID;
+        $standard->status = 'complete';
+        $standard->save();
+
+        $resume = app(AssessmentResumeService::class);
+        $this->assertSame('start-dimentaional-questions', $resume->resumeRoute(self::USER_ID, '1990-01-01'));
+        $this->assertSame('start-dimentaional-questions', $resume->restore(self::USER_ID, '1990-01-01'));
+        $this->assertNull($resume->resumeRoute(self::USER_ID, '2014-01-01'));
+
+        $dimensional = new DimensionalQuestionAnswerMain();
+        $dimensional->user_id = self::USER_ID;
+        $dimensional->status = 'complete';
+        $dimensional->save();
+        $this->assertNull($resume->resumeRoute(self::USER_ID, '1990-01-01'));
+    }
+
     public function test_dimensional_assessment_resumes_after_a_completed_standard_assessment(): void
     {
         $standard = new QuestionAnswerMain();

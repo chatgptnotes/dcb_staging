@@ -59,6 +59,14 @@ final class AssessmentResumeService
             return 'questions/d'.min(12, max(1, $lastQuestion + 1));
         }
 
+        // Completing the first section must still offer the second section,
+        // even when the user leaves before submitting its first answer.
+        if ($this->requiresDimensionalAssessment($dateOfBirth)
+            && QuestionAnswerMain::where('user_id', $userId)->where('status', 'complete')->exists()
+            && ! DimensionalQuestionAnswerMain::where('user_id', $userId)->where('status', 'complete')->exists()) {
+            return 'start-dimentaional-questions';
+        }
+
         return null;
     }
 
@@ -76,7 +84,7 @@ final class AssessmentResumeService
             return $this->resumeRoute($userId, $dateOfBirth);
         }
 
-        return null;
+        return $this->resumeRoute($userId, $dateOfBirth);
     }
 
     private function incompleteStandardAttempt(int $userId): ?QuestionAnswerMain
