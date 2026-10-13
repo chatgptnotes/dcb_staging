@@ -147,6 +147,36 @@ class NativeRegistrationTest extends TestCase
         $this->assertSame((int) $user->wp_user_id, (int) session('user_id'));
     }
 
+    public function test_new_email_does_not_reuse_an_identity_with_old_dimensional_progress(): void
+    {
+        $anchorId = max((int) User::max('wp_user_id'), (int) WPUsers::max('user_id'),
+            (int) \App\Models\QuestionAnswerMain::max('user_id'),
+            (int) \App\Models\DimensionalQuestionAnswerMain::max('user_id'), 1000000) + 10;
+        $anchor = new User();
+        $anchor->wp_user_id = $anchorId;
+        $anchor->email = 'identity-anchor@example.local';
+        $anchor->username = 'identity_anchor';
+        $anchor->status = 'active';
+        $anchor->user_role = '2';
+        $anchor->password = Hash::make('SyntheticAnchor#2026');
+        $anchor->save();
+        $oldAttempt = new \App\Models\DimensionalQuestionAnswerMain();
+        $oldAttempt->user_id = $anchorId + 1;
+        $oldAttempt->status = 'complete';
+        $oldAttempt->save();
+
+        try {
+            $this->post('/sign-up', $this->validPayload())->assertSessionHasNoErrors()->assertRedirect('intro');
+            $newUser = User::where('email', self::EMAIL)->firstOrFail();
+            $this->assertGreaterThan($oldAttempt->user_id, (int) $newUser->wp_user_id);
+            $this->assertFalse(\App\Models\DimensionalQuestionAnswerMain::where('user_id', $newUser->wp_user_id)->exists());
+            $this->assertSame('complete', $oldAttempt->fresh()->status);
+        } finally {
+            $oldAttempt->delete();
+            $anchor->delete();
+        }
+    }
+
     public function test_pay_first_registration_with_selected_plan_redirects_to_checkout(): void
     {
         config()->set('packages.funnel', 'pay_first');

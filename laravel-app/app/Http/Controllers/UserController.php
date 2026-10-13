@@ -326,11 +326,7 @@ private function ensureLoginIdentity(User $user): User
         $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
 
         if (! $locked->wp_user_id) {
-            $nextId = max(
-                (int) User::whereNotNull('wp_user_id')->max('wp_user_id'),
-                (int) WPUsers::max('user_id'),
-                1000000
-            ) + 1;
+            $nextId = $this->nextNativeIdentityId();
             $locked->wp_user_id = $nextId;
             $locked->save();
         }
@@ -895,6 +891,24 @@ private function validatePendingOrganizationCodeAge(int $age): void
     app(\App\Services\Billing\OrganizationCodeService::class)->validateAgeForCode($code, $age);
 }
 
+/** Allocate a legacy identity above accounts and retained assessment records. */
+private function nextNativeIdentityId(): int
+{
+    // Assessment records can outlive a deleted native account. Never assign
+    // their identity to a new email or overwrite an existing legacy mirror.
+    return max(
+        (int) User::max('wp_user_id'),
+        (int) WPUsers::max('user_id'),
+        (int) QuestionAnswerMain::max('user_id'),
+        (int) DimensionalQuestionAnswerMain::max('user_id'),
+        (int) DimensionalQuestionAnswers::max('user_id'),
+        (int) \App\Models\UserDimensionalScore::max('user_id'),
+        (int) \App\Models\SkillTestAnswersMain::max('user_id'),
+        (int) \App\Models\IntrovertExtrovertAnswerMain::max('user_id'),
+        1000000
+    ) + 1;
+}
+
 /**
  * Create the native account from validated, pre-hashed signup data, then log
  * the user in (same session keys as signInNative) and run the shared redirect.
@@ -906,8 +920,7 @@ private function createNativeUserFromData(array $data, Request $request)
     for ($attempt = 0; $attempt < 3; $attempt++) {
         try {
             $user = DB::transaction(function () use ($data) {
-                $maxId = (int) User::max('wp_user_id');
-                $newWpId = max($maxId, 1000000) + 1;
+                $newWpId = $this->nextNativeIdentityId();
 
                 $u = new User();
                 $u->wp_user_id = $newWpId;

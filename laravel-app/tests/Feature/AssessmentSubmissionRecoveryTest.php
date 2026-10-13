@@ -100,6 +100,36 @@ class AssessmentSubmissionRecoveryTest extends TestCase
             ->assertRedirect('/questions-completed');
     }
 
+    public function test_paid_adult_logout_after_25_then_login_offers_remaining_12(): void
+    {
+        config(['app.auth_driver' => 'native', 'app.otp_enabled' => false,
+            'packages.funnel' => 'pay_first']);
+        WPUsers::where('user_id', self::UID)->update(['package' => 'small-group']);
+        $user = new \App\Models\User();
+        $user->wp_user_id = self::UID;
+        $user->email = 'transition-diagnosis@example.local';
+        $user->username = 'transition_diagnosis';
+        $user->display_name = 'Diagnostic';
+        $user->date_of_birth = '1990-01-01';
+        $user->status = 'active';
+        $user->user_role = '2';
+        $user->password = \Illuminate\Support\Facades\Hash::make('SyntheticDiagnostic#2026');
+        $user->save();
+
+        $this->journey();
+        $this->assertFalse(\App\Models\DimensionalQuestionAnswerMain::where('user_id', self::UID)->exists());
+        $this->post('/logout')->assertRedirect('/sign-in')->assertSessionMissing('user_id');
+        $this->post('/sign-in', ['user_name' => $user->email, 'password' => 'SyntheticDiagnostic#2026'])
+            ->assertRedirect('/')->assertSessionHas('user_dob', '1990-01-01');
+        $html = $this->get('/')->assertOk()->getContent();
+        preg_match('/<header class="site-nav">(.*?)<\/header>/s', $html, $matches);
+        $this->assertNotEmpty($matches);
+        $this->assertSame(2, substr_count($matches[1], '>Resume assessment</a>'));
+        $this->assertStringNotContainsString('>Dashboard</a>', $matches[1]);
+        $this->get('/assessment/resume')->assertRedirect('/start-dimentaional-questions');
+        $this->get('/questions/d1')->assertOk();
+    }
+
     public function test_missing_birth_date_on_submission_does_not_skip_dimensional_section(): void
     {
         $this->journey(24);
