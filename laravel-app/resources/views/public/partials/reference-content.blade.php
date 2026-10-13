@@ -1025,9 +1025,9 @@ A 15-year-old boy with extraordinary energy and enthusiasm faced a critical care
 <div class="elementor-element elementor-element-33b4379 elementor-widget elementor-widget-button" data-element_type="widget" data-id="33b4379" data-widget_type="button.default">
 <div class="elementor-widget-container">
 <div class="elementor-button-wrapper">
-<a class="elementor-button elementor-button-link elementor-size-sm" href="https://decodemybrain.com/wp-content/uploads/2025/02/LBL-Case-Study.pdf" rel="noopener" target="_blank">
+<a class="elementor-button elementor-button-link elementor-size-sm" href="#resource-cases" data-info-dialog aria-controls="resource-cases" aria-haspopup="dialog">
 <span class="elementor-button-content-wrapper">
-<span class="elementor-button-text">Download</span>
+<span class="elementor-button-text">View overview</span>
 </span>
 </a>
 </div>
@@ -1052,9 +1052,9 @@ A 15-year-old boy with extraordinary energy and enthusiasm faced a critical care
 <div class="elementor-element elementor-element-7f640ab elementor-widget elementor-widget-button" data-element_type="widget" data-id="7f640ab" data-widget_type="button.default">
 <div class="elementor-widget-container">
 <div class="elementor-button-wrapper">
-<a class="elementor-button elementor-button-link elementor-size-sm" href="https://decodemybrain.com/wp-content/uploads/2025/12/Report.pdf" rel="noopener" target="_blank">
+<a class="elementor-button elementor-button-link elementor-size-sm" href="#resource-report" data-info-dialog aria-controls="resource-report" aria-haspopup="dialog">
 <span class="elementor-button-content-wrapper">
-<span class="elementor-button-text">Download</span>
+<span class="elementor-button-text">View overview</span>
 </span>
 </a>
 </div>
@@ -1080,9 +1080,9 @@ A 15-year-old boy with extraordinary energy and enthusiasm faced a critical care
 <div class="elementor-element elementor-element-b3042e5 elementor-widget elementor-widget-button" data-element_type="widget" data-id="b3042e5" data-widget_type="button.default">
 <div class="elementor-widget-container">
 <div class="elementor-button-wrapper">
-<a class="elementor-button elementor-button-link elementor-size-sm" href="https://decodemybrain.com/wp-content/uploads/2025/04/Future-Ready-Now-by-Dr.Sweta-Adatia.pdf" rel="noopener" target="_blank">
+<a class="elementor-button elementor-button-link elementor-size-sm" href="#resource-publication" data-info-dialog aria-controls="resource-publication" aria-haspopup="dialog">
 <span class="elementor-button-content-wrapper">
-<span class="elementor-button-text">Download</span>
+<span class="elementor-button-text">View overview</span>
 </span>
 </a>
 </div>
@@ -1107,9 +1107,9 @@ A 15-year-old boy with extraordinary energy and enthusiasm faced a critical care
 <div class="elementor-element elementor-element-fc3f889 elementor-widget elementor-widget-button" data-element_type="widget" data-id="fc3f889" data-widget_type="button.default">
 <div class="elementor-widget-container">
 <div class="elementor-button-wrapper">
-<a class="elementor-button elementor-button-link elementor-size-sm" href="https://decodemybrain.com/wp-content/uploads/2025/12/Framework.pdf" rel="noopener" target="_blank">
+<a class="elementor-button elementor-button-link elementor-size-sm" href="#resource-frameworks" data-info-dialog aria-controls="resource-frameworks" aria-haspopup="dialog">
 <span class="elementor-button-content-wrapper">
-<span class="elementor-button-text">Download</span>
+<span class="elementor-button-text">View overview</span>
 </span>
 </a>
 </div>
