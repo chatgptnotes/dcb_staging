@@ -1831,3 +1831,15 @@
 /* Override the imported widget's inherited uppercase and link colors. */
 #screen-home .reference-landing a.program-read-more{color:#111!important;background:transparent!important;text-transform:none!important;font-size:16px!important;font-weight:600!important;text-decoration:none!important}
 #screen-home .reference-landing a.program-read-more:hover,#screen-home .reference-landing a.program-read-more:focus-visible{background:#111!important;color:#fff!important}
+
+/* Resource PDFs load only when their dialog is opened. */
+.pdf-dialog{height:90vh;height:90dvh;overflow:hidden}
+.pdf-dialog[open]{display:flex;flex-direction:column}
+.pdf-dialog .dialog-bar{flex-shrink:0;gap:16px}
+.pdf-dialog .dialog-bar h2{font-size:20px;line-height:1.3;margin:0}
+.pdf-dialog .dialog-bar .btn{flex-shrink:0}
+.pdf-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:#fff;flex-shrink:0}
+.pdf-toolbar p{margin:0;font-size:14px}
+.pdf-toolbar .btn{flex-shrink:0}
+.resource-pdf{display:block;width:100%;flex:1;min-height:0;border:0;background:#eee}
+@media(max-width:600px){.pdf-dialog .dialog-bar,.pdf-toolbar{padding:12px}.pdf-dialog .dialog-bar h2{font-size:16px}.pdf-toolbar{flex-wrap:wrap}.pdf-toolbar .btn{padding:9px 16px}}

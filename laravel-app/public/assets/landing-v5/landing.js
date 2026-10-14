@@ -49,7 +49,11 @@
     document.querySelectorAll('.info-dialog[open]').forEach(dialog => {
       if (dialog !== target) dialog.close();
     });
-    if (target?.matches('.info-dialog') && !target.open) target.showModal();
+    if (target?.matches('.info-dialog') && !target.open) {
+      const pdf = target.querySelector('[data-pdf-src]');
+      if (pdf && !pdf.hasAttribute('src')) pdf.src = pdf.dataset.pdfSrc;
+      target.showModal();
+    }
   };
   document.querySelectorAll('[data-info-dialog]').forEach(link => {
     link.addEventListener('click', () => {

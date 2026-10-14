@@ -104,62 +104,29 @@
 
 
 
-<dialog class="info-dialog" id="resource-cases" aria-label="Cases"><div class="dialog-bar"><span class="logo">@include('public.partials.brand')</span><button type="button" class="btn" data-close-dialog>Close ✕</button></div>
-
-  <section class="resource-hero"><div class="wrap">
-    <span class="eyebrow">Case Studies</span>
-    <h1>Case Studies</h1>
-    <p>Explore how the DecodeMyBrain approach has been applied to family communication, teamwork and career decisions.</p>
-
-  </div></section>
-  <section><div class="wrap case-grid">
-    <article class="case-card"><h3>Family Dynamics</h3><p><b>Challenge:</b> recurring conflict and misunderstanding linked to different communication and emotional-response styles.</p><p><b>Approach:</b> family brain compatibility assessment, individualized profiles, a tailored communication plan, and coaching.</p><p><b>Reported outcome:</b> the case study states a 60% reduction in conflicts, with better harmony and constructive conversations.</p></article>
-    <article class="case-card"><h3>Corporate · Healthcare</h3><p><b>Challenge:</b> communication issues, lower productivity, burnout and retention pressure.</p><p><b>Approach:</b> team brain assessments, resilience workshops, focus tools and leadership training.</p><p><b>Reported outcome:</b> the case study states a 45% boost in team productivity alongside reduced burnout and improved collaboration.</p></article>
-    <article class="case-card"><h3>Career Development</h3><p><b>Challenge:</b> uncertainty about career fit despite existing skills and interests.</p><p><b>Approach:</b> personalized brain assessment, career discovery roadmap, resilience tools and one-to-one coaching.</p><p><b>Reported outcome:</b> the individual moved into a career described as better aligned with strengths, values and long-term goals.</p></article>
-  </div></section>
-
+@php
+  $resources = [
+    ['id' => 'cases', 'title' => 'Case Studies', 'url' => asset('assets/documents/dmb-case-studies.pdf')],
+    ['id' => 'report', 'title' => 'Sample Report', 'url' => asset('assets/documents/dmb-sample-report.pdf')],
+    ['id' => 'publication', 'title' => 'Publication — Future Ready Now',
+      'url' => 'https://drive.google.com/file/d/1DaEXzIKm0H1TpVsSgeotSO_gNNlvI692/preview',
+      'openUrl' => 'https://drive.google.com/file/d/1DaEXzIKm0H1TpVsSgeotSO_gNNlvI692/view'],
+    ['id' => 'frameworks', 'title' => 'DecodeMyBrain® Frameworks', 'url' => asset('assets/documents/dmb-main-booklet.pdf')],
+  ];
+@endphp
+@foreach($resources as $resource)
+<dialog class="info-dialog pdf-dialog" id="resource-{{ $resource['id'] }}" aria-labelledby="resource-{{ $resource['id'] }}-title">
+  <div class="dialog-bar">
+    <h2 id="resource-{{ $resource['id'] }}-title">{{ $resource['title'] }}</h2>
+    <button type="button" class="btn" data-close-dialog>Close ✕</button>
+  </div>
+  <div class="pdf-toolbar">
+    <p>If the PDF does not display, open it in a new tab.</p>
+    <a class="btn" href="{{ $resource['openUrl'] ?? $resource['url'] }}" target="_blank" rel="noopener">Open PDF ↗</a>
+  </div>
+  <iframe class="resource-pdf" data-pdf-src="{{ $resource['url'] }}" title="{{ $resource['title'] }} PDF viewer" allow="fullscreen"></iframe>
 </dialog>
-<dialog class="info-dialog" id="resource-report" aria-label="Report"><div class="dialog-bar"><span class="logo">@include('public.partials.brand')</span><button type="button" class="btn" data-close-dialog>Close ✕</button></div>
-
-  <section class="resource-hero"><div class="wrap">
-    <span class="eyebrow">Sample Report</span>
-    <h1>Brain Blueprint — Sample Report</h1>
-    <p>Explore the contents of the 18-page Brain Blueprint sample. This overview introduces the report structure and the kinds of insights it covers. Available reports depend on your package.</p>
-
-  </div></section>
-  <section><div class="wrap report-pages"><article class="report-page"><div class="num">Page 1</div><h3>Brain Blueprint</h3><p>Cover: decoding the brain blueprint for holistic success and happiness.</p></article><article class="report-page"><div class="num">Page 2</div><h3>Participant Profile</h3><p>Sample participant details, assessment date and report code.</p></article><article class="report-page"><div class="num">Page 3</div><h3>Introduction</h3><p>What DecodeMyBrain is designed to help a user understand about thinking, learning, decisions and growth.</p></article><article class="report-page"><div class="num">Page 4</div><h3>Four Brain Types</h3><p>Analytical, Creative, Practical and Relational cognitive preferences.</p></article><article class="report-page"><div class="num">Page 5</div><h3>Analytical Thinking</h3><p>Precision, logic, facts, strategy and structured problem-solving.</p></article><article class="report-page"><div class="num">Page 6</div><h3>Organizer Thinking</h3><p>Planning, reliability, systems, execution and detail orientation.</p></article><article class="report-page"><div class="num">Page 7</div><h3>Relational Thinking</h3><p>Empathy, communication, team building and emotional insight.</p></article><article class="report-page"><div class="num">Page 8</div><h3>Creative Thinking</h3><p>Innovation, imagination, future orientation and adaptability.</p></article><article class="report-page"><div class="num">Page 9</div><h3>Flow &amp; Grow</h3><p>Developing less-dominant thinking styles while building from natural strengths.</p></article><article class="report-page"><div class="num">Page 10</div><h3>Growth Indices</h3><p>A personalized view across leadership, creativity, adaptability, entrepreneurship and collaboration.</p></article><article class="report-page"><div class="num">Page 11</div><h3>Learning Styles</h3><p>Preferred learning methods and techniques aligned to the participant&#x27;s brain profile.</p></article><article class="report-page"><div class="num">Page 12</div><h3>Extracurricular Activities</h3><p>Sports and activities suggested to match strengths and stretch growth.</p></article><article class="report-page"><div class="num">Page 13</div><h3>Communication &amp; Behaviour</h3><p>Typical communication patterns, strengths, challenges and improvement tips.</p></article><article class="report-page"><div class="num">Page 14</div><h3>Diet &amp; Nutrition</h3><p>Preferred habits and approaches to structure, mindful eating and consistency.</p></article><article class="report-page"><div class="num">Page 15</div><h3>Job &amp; Work</h3><p>Work environments, roles and decision styles aligned to the profile.</p></article><article class="report-page"><div class="num">Page 16</div><h3>Relationship Styles</h3><p>How communication, independence, logic and empathy may influence relationships.</p></article><article class="report-page"><div class="num">Page 17</div><h3>Develop Your Brain</h3><p>Flow &amp; Grow actions: use strengths, build weaker areas and practise whole-brain development.</p></article><article class="report-page"><div class="num">Page 18</div><h3>Future-Ready You</h3><p>Closing guidance: dominant style is a starting point, not a fixed limit.</p></article></div></section>
-
-</dialog>
-<dialog class="info-dialog" id="resource-publication" aria-label="Publication"><div class="dialog-bar"><span class="logo">@include('public.partials.brand')</span><button type="button" class="btn" data-close-dialog>Close ✕</button></div>
-
-  <section class="resource-hero"><div class="wrap">
-    <span class="eyebrow">Publication</span>
-    <h1>Future Ready Now</h1>
-    <p><b>Neuroscience-based Career and Life Design</b> by Dr. Sweta Adatia. Explore the ideas about career discovery and personal development behind the DecodeMyBrain approach.</p>
-
-  </div></section>
-  <section><div class="wrap">
-    <h2 style="font-size:32px;margin:0 0 22px">Publication structure</h2>
-    <div class="book-toc"><div class="book-chapter">Chapter 1 · Arranged-Cum-Love Career: What a Dilemma!</div><div class="book-chapter">Chapter 2 · What’s all the Fuss About Career Discovery?</div><div class="book-chapter">Chapter 3 · The Who, What, When, Where and How of Generation Alpha</div><div class="book-chapter">Chapter 4 · The World of Work in the 21st Century: Expect the Unexpected</div><div class="book-chapter">Chapter 5 · Is There a Perfect Career Tool?</div><div class="book-chapter">Chapter 6 · What is the Difference in the Difference?</div><div class="book-chapter">Chapter 7 · Mybraindesign®: The Secret Source to ‘Know Thyself’</div><div class="book-chapter">Chapter 8 · The End Point for Your Career Choice is the New Beginning for Your Life</div><div class="book-chapter">Chapter 9 · Let’s Live By Purpose, and Not By Accident</div><div class="book-chapter">Chapter 10 · Flow and Grow: Stretching the Thinking through New Hobbies and Activities</div><div class="book-chapter">Chapter 11 · Adult Bonus Chapter</div><div class="book-chapter">Conclusion · About the Author · Extras · Resources · Testimonials</div></div>
-  </div></section>
-
-</dialog>
-<dialog class="info-dialog" id="resource-frameworks" aria-label="Frameworks"><div class="dialog-bar"><span class="logo">@include('public.partials.brand')</span><button type="button" class="btn" data-close-dialog>Close ✕</button></div>
-
-  <section class="resource-hero"><div class="wrap">
-    <span class="eyebrow">DecodeMyBrain® Frameworks</span>
-    <h1>From knowing your brain to developing it.</h1>
-    <p>Explore the concepts behind DecodeMyBrain: understand your thinking preferences, build on your strengths and put that awareness into practice.</p>
-  </div></section>
-  <section><div class="wrap framework-grid">
-    <article class="framework-card"><h3>Self-Knowledge → Self-Mastery</h3><p>Start by understanding natural brain preferences, then build the capabilities required to grow beyond them.</p></article>
-    <article class="framework-card"><h3>Four Brain Preferences</h3><p>Analytical, Practical, Relational and Creative preferences provide a working lens for how people process information and make decisions.</p></article>
-    <article class="framework-card"><h3>Flow &amp; Grow</h3><p>Build confidence through existing strengths, then deliberately develop less-dominant thinking styles for whole-brain growth.</p></article>
-    <article class="framework-card"><h3>Brain Connect</h3><p>Use brain-pattern understanding to improve communication and connection with family, friends and colleagues.</p></article>
-  </div></section>
-
-</dialog>
-
+@endforeach
 
 @foreach($packages as $package)
 <dialog class="info-dialog" id="program-{{ $package->slug }}" aria-label="{{ $package->title }}">
